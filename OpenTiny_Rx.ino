@@ -17,7 +17,6 @@
 // thUndead (forum nick name: thUndead) 
 // Modifyed Baychi to compatable with Expert 2G/Tiny LRS
 
-
 #include "config.h"
 
 #include <EEPROM.h>
