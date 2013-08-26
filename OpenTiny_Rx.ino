@@ -17,6 +17,7 @@
 // thUndead (forum nick name: thUndead) 
 // Modifyed Baychi to compatable with Expert 2G/Tiny LRS
 
+
 #include "config.h"
 
 #include <EEPROM.h>
@@ -112,7 +113,7 @@ void doMenu()                       // работаем с меню
   while(1) {
     Serial.println("Rg=Val \tComments -----------------");
     showRegs();
-    Serial.println("Type reg num and press ENTER, type value and press ENTER (q=Quit, s=Stat)");
+    Serial.println("Type Reg and press ENTER, type Value and press ENTER (q=Quit, ss/sl/sa=Stat)");
 
 rep:  
     getStr(str);
@@ -543,18 +544,20 @@ hotRest:
         
 // 
 // Подстройка частоты
-          if(temp_int > 127) temp_int=temp_int-256;
-          if(temp_int < -20 || temp_int > 20) temp_int=0;     // нереальные значения игнорируем
-          else temp_int = temp_int * 16;
-          afc_counter++;
+          if(Regs[4] != 0) {                          // в ручном режиме не работает  
+            if(temp_int > 127) temp_int=temp_int-256;
+            if(temp_int < -20 || temp_int > 20) temp_int=0;     // нереальные значения игнорируем
+            else temp_int = temp_int * 16;
+            afc_counter++;
         
-          afc_avr = afc_avr-afc_avr/16 + temp_int/16;         // усредняем методом скользящего среднего
-          if(abs(afc_avr) > (AFC_POROG*16) && afc_counter > 32) {
-            afc_avr = -(afc_avr/16);
-            Regs4[2]+=afc_avr;
-            _spi_write(0x09,Regs4[2]);                       // меняем подстройку частоты   
-            if(!satFlag) { Serial.print("Fcorr=");   Serial.println(afc_avr); }
-            afc_counter=afc_avr=0;
+            afc_avr = afc_avr-afc_avr/16 + temp_int/16;         // усредняем методом скользящего среднего
+            if(abs(afc_avr) > (AFC_POROG*16) && afc_counter > 32) {
+              afc_avr = -(afc_avr/16);
+              Regs4[2]+=afc_avr;
+              _spi_write(0x09,Regs4[2]);                       // меняем подстройку частоты   
+              if(!satFlag) { Serial.print("Fcorr=");   Serial.println(afc_avr); }
+              afc_counter=afc_avr=0;
+            }
           }
 
        	  beacon_flag=failsafe_mode = 0; // deactivate failsafe mode
