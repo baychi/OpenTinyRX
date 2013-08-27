@@ -544,7 +544,7 @@ hotRest:
         
 // 
 // Подстройка частоты
-          if(Regs[4] != 0) {                          // в ручном режиме не работает  
+          if(Regs4[3] != 0) {                          // в ручном режиме не работает  
             if(temp_int > 127) temp_int=temp_int-256;
             if(temp_int < -20 || temp_int > 20) temp_int=0;     // нереальные значения игнорируем
             else temp_int = temp_int * 16;
