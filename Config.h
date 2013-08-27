@@ -11,12 +11,12 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 4, 6 };
+unsigned char version[] = { 4, 7 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx Tiny original Board
 // 2 = Rx Open/orange v2 Board
-#define RX_BOARD_TYPE 1
+#define RX_BOARD_TYPE 2
 
 //######### DEBUG MODES ##########
 // 0 = No Debug Output
