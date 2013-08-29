@@ -11,10 +11,10 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 4, 7 };
+unsigned char version[] = { 4, 9 };
 
 //####### RX BOARD TYPE #######
-// 1 = Rx Tiny original Board
+// 1 = Rx 2G/Tiny original Board
 // 2 = Rx Open/orange v2 Board
 #define RX_BOARD_TYPE 2
 
@@ -55,6 +55,8 @@ static unsigned char  SAWreg[2] =   {75, 210 };
 // Регистры маяка (19-24): частота, мошность1 - мощность 4, пауза перед первым писком (сек)
 // При неотключаемом SAW, неообходимо ограничить мощность 10 мВт и внести частоту маяка в полосу фильтра
 static unsigned char  BeaconReg[6] =   { 101, 12, 10, 9, 8, 30 };  
+static unsigned char pwm1chnl = 4;     // номер первого PWM канала в комбинированном режимме.
+
 // Регистры RSSI (40-42). Задают тип (биби/Вольты) и режим (уровень сигнала или отношение сигнал/шум).
 // RSSIreg[2] - вывод RSSI через PWM выход (1-8)
 static unsigned char  RSSIreg[3] =   { 1, 0, 0 };  
@@ -206,24 +208,24 @@ unsigned long lastSatTime=0;            // время приема послед�
     #define  SDO_0 (PINB & 0x10) == 0x00 //B4
     
 // SAW filtre support
-    #define SAW_FILT_ON  _spi_write(0x0e, 0x04);    // GPIO2=1   
-    #define SAW_FILT_OFF  _spi_write(0x0e, 0x00);    // GPIO2=0
-//    #define SAW_FILT_ON  PORTC |= _BV(4);   
-//    #define SAW_FILT_OFF PORTC &= ~_BV(4);
+//    #define SAW_FILT_ON _spi_write(0x0e, 0x04);    // GPIO2=1   
+//    #define SAW_FILT_OFF  _spi_write(0x0e, 0x00);    // GPIO2=0
+    #define SAW_FILT_ON  PORTC |= _BV(7);   
+    #define SAW_FILT_OFF PORTC &= ~_BV(7);
 
     //#### Other interface pinouts ###
-    #define GREEN_LED_pin A2
-    #define RED_LED_pin A3
+    #define GREEN_LED_pin A6
+    #define RED_LED_pin A7
     
-    #define Red_LED_ON  PORTC  |= _BV(2);  
-    #define Red_LED_OFF  PORTC &= ~_BV(2); 
+    #define Red_LED_ON   PORTC |= _BV(6);  
+    #define Red_LED_OFF  PORTC &= ~_BV(6); 
     
-    #define Green_LED_ON  PORTC |= _BV(3);
-    #define Green_LED_OFF PORTC &= ~_BV(3);    
+    #define Green_LED_ON  PORTC = PORTC;  // фиктивно
+    #define Green_LED_OFF PORTC = PORTC;    
 //    #define Green_LED_ON  _spi_write(0x0e, 0x04);   // Оригинальный Tiny
 //    #define Green_LED_OFF _spi_write(0x0e, 0x00);      
         
-    #define Servo_Ports_LOW PORTB &= 0xF8; PORTC &= 0xDD; PORTD &= 0x0F; // pulling down the servo outputs
+    #define Servo_Ports_LOW PORTB &= 0xF8; PORTC &= 0xC1; PORTD &= 0x0F; // pulling down the servo outputs
     
     #define RSSI_MODE 1 //0=disable  1=enable 
     #define RSSI_OUT 3 // D3
@@ -236,8 +238,10 @@ unsigned long lastSatTime=0;            // время приема послед�
     #define Servo6_OUT 5 //Servo6
     #define Servo7_OUT 4 //Servo7
     #define Servo8_OUT A5 //Servo8
-    #define Servo9_OUT A1 //Servo9 
-    #define Servo10_OUT A6 //Servo9 // not have on this version
+    #define Servo9_OUT A4 //Servo9 
+    #define Servo10_OUT A3 //Servo10 // 2G only
+    #define Servo11_OUT A2 //Servo11 // 2G only  
+    #define Servo12_OUT A1 //Servo9  // 2G only
     
     #define Servo1_OUT_HIGH PORTB |= _BV(2) //Servo1
     #define Servo2_OUT_HIGH PORTB |= _BV(1) //Servo2
@@ -247,8 +251,10 @@ unsigned long lastSatTime=0;            // время приема послед�
     #define Servo6_OUT_HIGH PORTD |= _BV(5) //Servo6
     #define Servo7_OUT_HIGH PORTD |= _BV(4) //Servo7
     #define Servo8_OUT_HIGH PORTC |= _BV(5) //Servo8
-    #define Servo9_OUT_HIGH PORTC |= _BV(1) //Servo9
-    #define Servo10_OUT_HIGH PORTC |= _BV(6) //Servo10
+    #define Servo9_OUT_HIGH PORTC |= _BV(4) //Servo9
+    #define Servo10_OUT_HIGH PORTC |= _BV(3) //Servo10
+    #define Servo11_OUT_HIGH PORTC |= _BV(2) //Servo11
+    #define Servo12_OUT_HIGH PORTC |= _BV(1) //Servo12
     
     #define Serial_PPM_OUT_HIGH PORTB |= _BV(0) //Serial PPM out on Servo 3
 #endif
