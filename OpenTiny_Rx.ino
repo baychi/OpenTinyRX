@@ -23,7 +23,7 @@
 #include <EEPROM.h>
 
 // Функции меню терминала
-static unsigned char regs[] = {1, 2, 3, 11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,40,41,42 } ;
+static unsigned char regs[] = {1, 2, 3, 11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,28,40,41,42 } ;
 static char *help[] = {
   "Bind N",
   "Freq Corr",
@@ -44,6 +44,7 @@ static char *help[] = {
   "Beacon start time (sec)",
   "SAW Fmin",
   "SAW Fmax",
+  "PPM mode 1st PWM chnl (1-8) [4]", 
   "RSSI type: sound(0)/level(1)",
   "RSSI mode: level(0)/SN ratio(1)",
   "RSSI over PWM (ch num:1-12) 0- not use"
@@ -86,6 +87,10 @@ void getStr(char str[])             // получение строки, заве
     if (Serial.available() > 0) {
        in= Serial.read();             // все, что пришло, отображаем
        if(in > 0) {
+          if(in == SAT_PACK_HEADER) {  // если обнаружили заголовок от саттелита
+            str[0]='q'; str[1]=0;      // иммитируем Quit
+            return;
+          }
           Serial.write(in);
           if(in == 0xd || in == 0xa) {
             Serial.println("");
@@ -242,8 +247,8 @@ ISR(TIMER1_OVF_vect)
         if(total_ppm_time < 34000) us = 40000 - total_ppm_time; //wait for total 20ms loop.  waiting time = 20.000us - total servo times
         else us=6000;                      // если сумма импульсов болше 20 мс, обеспечиваем 3 мс паузу, растягивя цикл                                
     }  else {
-       us = Servo_Position[Servo_Number]; // read the servo timing from buffer
-       total_ppm_time += us; // calculate total servo signal times.
+      us = Servo_Position[Servo_Number]; // read the servo timing from buffer
+      total_ppm_time += us; // calculate total servo signal times.
     }
  
     if (receiver_mode==0) { // Parallel PPM
@@ -282,10 +287,10 @@ ISR(TIMER1_OVF_vect)
      } else { // Serial PPM over 3&4  channel and PWM at 5-10 ch
         delayMicroseconds(250);         // !!!!! Не очень хорошая идея, но пока так
         us-=500;
-        switch (Servo_Number) {
-        case 3:
-         Servo4_OUT_HIGH;
-        break;
+        switch (Servo_Number+4-pwm1chnl) {
+         case 3:
+          Servo4_OUT_HIGH;
+         break;
          case 4:
           Servo5_OUT_HIGH;
          break;
