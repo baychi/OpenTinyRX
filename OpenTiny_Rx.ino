@@ -85,12 +85,12 @@ void getStr(char str[])             // получение строки, заве
   str[0]=0;
   while(1) {
     if (Serial.available() > 0) {
+      if(Serial.peek() == SAT_PACK_HEADER) {  // если обнаружили заголовок от саттелита
+        str[0]='q'; str[1]=0;      // иммитируем Quit
+        return;
+      }
        in= Serial.read();             // все, что пришло, отображаем
        if(in > 0) {
-          if(in == SAT_PACK_HEADER) {  // если обнаружили заголовок от саттелита
-            str[0]='q'; str[1]=0;      // иммитируем Quit
-            return;
-          }
           Serial.write(in);
           if(in == 0xd || in == 0xa) {
             Serial.println("");
