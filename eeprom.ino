@@ -104,6 +104,10 @@ int read_eeprom(void)
    // Регистры поддержки SAW фильтра (25,26) 
    ks+= SAWreg[0] = read_eeprom_uchar(25);  
    ks+= SAWreg[1] = read_eeprom_uchar(26);  
+
+   i=read_eeprom_uchar(28);           // номер первого PWM в PPM режиме
+   if(i>0 && i<=8) { pwm1chnl=i; ks+=i; }
+   
 // Регистры RSSI (40-41). Задают тип (биби/Вольты) и режим (уровень сигнала или отношение сигнал/шум)
    ks+= RSSIreg[0] = read_eeprom_uchar(40);  
    ks+= RSSIreg[1] = read_eeprom_uchar(41);  
@@ -141,6 +145,8 @@ void write_eeprom(void)
    // Регистры поддержки SAW фильтра (25,26) 
    write_eeprom_uchar(25,SAWreg[0]);     ks+=SAWreg[0];  
    write_eeprom_uchar(26,SAWreg[1]);     ks+=SAWreg[1];  
+
+   write_eeprom_uchar(28,pwm1chnl);      ks+=pwm1chnl;  // номер первого PWM в PPM режиме
 
 // Регистры RSSI (40-41). Задают тип (биби/Вольты) и режим (уровень сигнала или отношение сигнал/шум)
    write_eeprom_uchar(40,RSSIreg[0]);     ks+=RSSIreg[0];  
