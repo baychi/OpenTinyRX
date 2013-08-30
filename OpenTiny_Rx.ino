@@ -23,6 +23,8 @@
 #include <EEPROM.h>
 
 // Функции меню терминала
+//
+static unsigned char menuFlag=1;              // флаг, разрешающий меню
 static unsigned char regs[] = {1, 2, 3, 11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,28,40,41,42 } ;
 static char *help[] = {
   "Bind N",
@@ -87,6 +89,7 @@ void getStr(char str[])             // получение строки, заве
     if (Serial.available() > 0) {
       if(Serial.peek() == SAT_PACK_HEADER) {  // если обнаружили заголовок от саттелита
         str[0]='q'; str[1]=0;      // иммитируем Quit
+        menuFlag=0;              // запрещаем меню
         return;
       }
        in= Serial.read();             // все, что пришло, отображаем
@@ -164,6 +167,7 @@ void tryRecvSat(void)
           satIn[0]=SAT_PACK_HEADER;
           satCntr++;
           satRecFlag=0;            // пока пакет формируется, им неля пользоваться 
+          menuFlag=0;              // запрещаем меню
        }
     } else {                      // принимаем очередной байт
       satIn[satCntr++]=in;
@@ -404,7 +408,7 @@ hotRest:
 	time = millis();  // текущее время
 	tdif=time - last_hopping_time;  // время с момента последнего приема
 
-        if(time-start_time < MENU_WAIT_TIME) {   // даем 5 сек на вход в меню
+        if(menuFlag && time-start_time < MENU_WAIT_TIME) {   // даем 5 сек на вход в меню
            if(checkMenu()) {        // реализуем возможность входа в меню
               doMenu(); 
               RF22B_init_parameter(); 
