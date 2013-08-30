@@ -120,7 +120,14 @@ void RF22B_init_parameter(void)
   _spi_write(0x0a, 0x05);    // выход CLK 2 МГц ?
   _spi_write(0x0b, 0x12);    // gpio0 TX State
   _spi_write(0x0c, 0x15);    // gpio1 RX State 
+
+#if(RX_BOARD_TYPE == 2)
   _spi_write(0x0d, 0x0a);    // GPIO2, для управления SAW фильтром
+#endif
+#if(RX_BOARD_TYPE == 1)
+  _spi_write(0x0d, 0x1b);    // GPIO2 как индикатор принимаемыемх пакетов
+#endif
+
   _spi_write(0x0e, 0x00);    // gpio 0, 1,2 NO OTHER FUNCTION. 
   
 // From Expert
