@@ -289,8 +289,6 @@ ISR(TIMER1_OVF_vect)
         break;  
         }     
      } else { // Serial PPM over 3&4  channel and PWM at 5-10 ch
-        delayMicroseconds(250);         // !!!!! Не очень хорошая идея, но пока так
-        us-=500;
         switch (Servo_Number+4-pwm1chnl) {
          case 3:
           Servo4_OUT_HIGH;
@@ -314,6 +312,8 @@ ISR(TIMER1_OVF_vect)
           Servo10_OUT_HIGH;
           break;  
         }     
+        delayMicroseconds(250);         // !!!!! Не очень хорошая идея, но пока так
+        us-=500;
         Serial_PPM_OUT_HIGH;
     }
   } else us=40000;    // обеспечиваем холостой цикл
