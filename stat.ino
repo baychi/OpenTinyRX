@@ -1,3 +1,5 @@
+#include <avr/boot.h>
+#define SIGRD 5                     // бит регистров идентификации для boot_signature_byte_get
 
 struct saveStatRec {
    unsigned char flightNum;         // номер полета (инкрементируется при каждом включении)
@@ -69,6 +71,10 @@ void statLoop(void)                                 // фоновой цикл �
 void statInit(void)                            // инициализация статистики в начале работы
 {
    unsigned char i;
+
+   i=boot_signature_byte_get(0x01);            // отличаем Мегу 168 от 328-й
+   if(i != 0x95) LAST_EEPROM_ADR=504;          // 16*26 + 88
+
    statAdr=EEPROM.read(STAT_PTR_ADR);          // читаем указатель на очередную запись
    statAdr += EEPROM.read(STAT_PTR_ADR+1)*256; 
    if(statAdr < STAT_EPROM_ADR || statAdr >=LAST_EEPROM_ADR) { // некорректный указатель
@@ -148,6 +154,7 @@ void statShow(unsigned char mode)                  // вывести стати�
        } else i+=16;
        
        Serial.println("");
+       wdt_reset();               //  поддержка сторожевого таймера
      }
      if(i >= LAST_EEPROM_ADR) i=STAT_EPROM_ADR;
      if(i == statAdr) break;           // круг замкнулся, значит мы достигли конца
@@ -158,8 +165,9 @@ void statErase(void)                  // стирание статистики
 {
   Serial.print("Statistics in EEPROM erase ");
   for(int i=STAT_EPROM_ADR; i<LAST_EEPROM_ADR; i++) {
-          EEPROM.write(i,0xff);
-          if((i&0x7f) == 0) Serial.print(".");
+       EEPROM.write(i,0xff);
+       if((i&0x7f) == 0) Serial.print(".");
+       wdt_reset();               //  поддержка сторожевого таймера
   }
   statAdr=STAT_EPROM_ADR;
   flightCntr=0;
