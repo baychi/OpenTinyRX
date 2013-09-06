@@ -19,135 +19,9 @@
 
 
 #include "config.h"
-
 #include <EEPROM.h>
+#include <avr/wdt.h>
 
-// Функции меню терминала
-//
-static unsigned char menuFlag=1;              // флаг, разрешающий меню
-static unsigned char regs[] = {1, 2, 3, 11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,28,40,41,42 } ;
-static char *help[] = {
-  "Bind N",
-  "Freq Corr",
-  "Statistics enable",
-  "Hope F1",
-  "Hope F2",
-  "Hope F3",
-  "Hope F4",
-  "Hope F5",
-  "Hope F6",
-  "Hope F7",
-  "Hope F8",
-  "Beacon F (FF=disable)",
-  "Beacon P1",  
-  "Beacon P2",
-  "Beacon P3",
-  "Beacon P4",
-  "Beacon start time (sec)",
-  "SAW Fmin",
-  "SAW Fmax",
-  "PPM mode 1st PWM chnl (1-8) [4]", 
-  "RSSI type: sound(0)/level(1)",
-  "RSSI mode: level(0)/SN ratio(1)",
-  "RSSI over PWM (ch num:1-12) 0- not use"
-};  
-  
-
-void showRegs(void)         // показать значения регистров
-{
-  unsigned char i,j=0;
-  for(int i=1; i<=REGS_NUM; i++) {
-    if(regs[j] == i) {
-      Serial.print(i);
-      Serial.print("=");
-      Serial.print(read_eeprom_uchar(i));
-      Serial.print("\t");
-      Serial.println(help[j]);
-      j++;
-    }
-  }
-}
-
-
-int checkMenu(void)   // проверка на вход в меню
-{
-   int in; 
-   
-   if (Serial.available() > 0) {
-      in= Serial.read();             // все, что пришло, отображаем
-      if(in == 'm' || in == 'M') return 1; // есть вход в меню
-   } 
-   return 0;                        // не дождались 
-}
-
-
-void getStr(char str[])             // получение строки, завершающейся Enter от пользователя
-{
-  int in,sn=0;
-  str[0]=0;
-  while(1) {
-    if (Serial.available() > 0) {
-      if(Serial.peek() == SAT_PACK_HEADER) {  // если обнаружили заголовок от саттелита
-        str[0]='q'; str[1]=0;      // иммитируем Quit
-        menuFlag=0;              // запрещаем меню
-        return;
-      }
-       in= Serial.read();             // все, что пришло, отображаем
-       if(in > 0) {
-          Serial.write(in);
-          if(in == 0xd || in == 0xa) {
-            Serial.println("");
-            return;                     // нажали Enter
-          }
-          if(in == 8) {                 // backspace, удаляем последний символ
-            if(sn) sn--;
-            continue;
-          } 
-          str[sn]=in; str[sn+1]=0;
-          if(sn < 6) sn++;              // не более 6 символов
-        }
-     } else delay(1);
-  }
-}
-
-void doMenu()                       // работаем с меню
-{
-  char str[8];
-  int reg,val;
-  Serial.println("To Enter MENU Press ENTER");
-  getStr(str);
-  if(str[0] == 'q' || str[0] == 'Q') return;     // Q - то quit
-  
-  while(1) {
-    Serial.println("Rg=Val \tComments -----------------");
-    showRegs();
-    Serial.println("Type Reg and press ENTER, type Value and press ENTER (q=Quit, ss/sl/sa=Stat)");
-
-rep:  
-    getStr(str);
-    if(str[0] == 's' || str[0] == 'S') {
-      if(str[1] == 'e') statErase();
-      else statShow(str[1]);  // Печать статистики
-      goto rep;
-    }
-    
-    if(str[0] == 'q' || str[0] == 'Q') return;     // Q - то quit
-    reg=atoi(str);
-    if(reg<0 || reg>REGS_NUM) continue; 
-
-    getStr(str);
-    if(str[0] == 'q' || str[0] == 'Q') return;     // Q - то quit
-    val=atoi(str);
-    if(val<0 || val>255) continue; 
-    if(reg == 0 && val ==0) continue;              // избегаем потери s/n
-
-    Serial.print(reg); Serial.print("=");   Serial.println(val);  // Отобразим полученное
-    
-     write_eeprom_uchar(reg,val);  // пишем регистр
-     read_eeprom();                // читаем из EEPROM    
-     write_eeprom();               // и тут-же пишем, что-бы сформировать КС 
-  }    
-}  
 //---------------------------------------------------------------------------
 //
 // Функции для приемников саттелитов
@@ -289,6 +163,8 @@ ISR(TIMER1_OVF_vect)
         break;  
         }     
      } else { // Serial PPM over 3&4  channel and PWM at 5-10 ch
+        delayMicroseconds(250);         // !!!!! Не очень хорошая идея, но пока так
+        us-=500;
         switch (Servo_Number+4-pwm1chnl) {
          case 3:
           Servo4_OUT_HIGH;
@@ -312,8 +188,6 @@ ISR(TIMER1_OVF_vect)
           Servo10_OUT_HIGH;
           break;  
         }     
-        delayMicroseconds(250);         // !!!!! Не очень хорошая идея, но пока так
-        us-=500;
         Serial_PPM_OUT_HIGH;
     }
   } else us=40000;    // обеспечиваем холостой цикл
@@ -351,11 +225,12 @@ void loop()
   }
   satFlag=check_modes(4);       // проверим на режим саттелита
   
-  Red_LED_Blink(1); // 3x Red LED blinks for serial PPM mode.
+  Red_LED_Blink(1); // Red LED blink
 
   if(!satFlag) {
      Serial.println("Baychi soft 2013");
      Serial.print("RX Open Tiny V2 F"); Serial.println(version[0]);
+     Red_LED_Blink(1); // Red LED blink
   }
   eeprom_check(); 
   statInit();         // инициализируем статистику
@@ -365,6 +240,8 @@ void loop()
 
   frequency_configurator(CARRIER_FREQUENCY); // Calibrate the RFM22B to this frequency, frequency hopping starts from here.
   PWM_enable=0;
+  wdt_enable(WDTO_1S);     // запускаем сторожевой таймер 
+//  wdt_enable(WDTO_250MS);     // запускаем сторожевой таймер 
 
   if(!satFlag) {           // 
     Serial.print("S/N=");  Serial.println(Regs4[0]);
@@ -399,7 +276,9 @@ hotRest:
  
   while(1) {    /* MAIN LOOP */
 
-        if (_spi_read(0x0C)==0) {  // detect the locked module and reinit
+       wdt_reset();               //  поддержка сторожевого таймера
+  
+       if (_spi_read(0x0C)==0) {  // detect the locked module and reinit
            RF22B_init_parameter(); 
            to_rx_mode(); 			 
            if(!satFlag) Serial.println("FiErr!");
@@ -611,7 +490,7 @@ hotRest:
           beacon_flag=1; 
           if(BeaconReg[5] != 0xff) {                                 // если маяк не запрещен
             if(!satFlag) Serial.println("SOS"); 
-            beacon_send();                                           // Маяк посылает 2-х серкундные посылки по 4 тона
+            beacon_send();                                           // Маяк посылает 2-х секундные посылки по 4 тона
           }
           if(!satFlag) Serial.println("Init"); 
           RF22B_init_parameter();   // go back to normal RX
