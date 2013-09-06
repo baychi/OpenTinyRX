@@ -58,22 +58,33 @@ static unsigned pairs[10] = { // пары для 5-х возможных пер�
 //
 unsigned char check_modes(int n)   // 0 - режим PWM/PPM; 1-анализатор спектра?; 2 - сброс регистров в дефолт, 4 -сателлит.
 {
-  if(n>4) n=0;
+  if(n>4) return 0;
   else n+=n;
-  
-  pinMode(pairs[n+1], INPUT);     // input
-  digitalWrite(pairs[n+1], HIGH); // pull up
-  digitalWrite(pairs[n], HIGH);   // CH1,3,5 is HIGH
+
+  pinMode(pairs[n], INPUT);     // input
+  digitalWrite(pairs[n], HIGH); // pull up
+
+  #if(RX_BOARD_TYPE == 1)           // у Тини нет 10-го канала, проверяем на перемычку между 9 и GND
+    if(n == 8) {
+      delayMicroseconds(2);
+      if(digitalRead(pairs[n]) == LOW) return 1; // если притянут к земле, значит перемычка есть
+
+      pinMode(pairs[n], OUTPUT);                // перемычка не найдена - восстанавливаем выход
+      return  0; // Jumper not set
+    }
+  #endif
+
+  digitalWrite(pairs[n+1], HIGH);   // CH1,3,5 is HIGH
   delayMicroseconds(2);
-  if (digitalRead(pairs[n+1]) == HIGH) 	{
-	digitalWrite(pairs[n], LOW); // CH1,3,5 is LOW
+  if (digitalRead(pairs[n]) == HIGH) 	{
+	digitalWrite(pairs[n+1], LOW); // CH1,3,5 is LOW
 	delayMicroseconds(2);
-	if (digitalRead(pairs[n+1]) == LOW) { // OK jumper plugged
-//             pinMode(pairs[n+1], OUTPUT);   // не восстанавливаем выход, что-бы не было конфликта
+	if (digitalRead(pairs[n]) == LOW) { // OK jumper plugged
+//             pinMode(pairs[n], OUTPUT);   // не восстанавливаем выход, что-бы не было конфликта
 	     return  1; // Jumper is set
 	}
   }
-  pinMode(pairs[n+1], OUTPUT);                // перемычка не найдена - восстанавливаем выход
+  pinMode(pairs[n], OUTPUT);                // перемычка не найдена - восстанавливаем выход
 
   return  0; // Jumper not set
 }
