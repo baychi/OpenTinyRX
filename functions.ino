@@ -105,7 +105,7 @@ void Buf_To_Servo(unsigned char buf[])
         if(i<8) {                   // 2-й байт пакета содержит старшие биты 8-ми первых каналов 
            if(buf[1]&(1<<i)) temp_int +=1024; 
          } else temp_int +=temp_int;
-         Servo_Buffer[i] = temp_int+1990; // кодируем PWM в мкс*2
+         Servo_Buffer[i] = temp_int+1980; // кодируем PWM в мкс*2
       }
 }  
 
