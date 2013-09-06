@@ -11,7 +11,7 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 4, 9 };
+unsigned char version[] = { 5, 5 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -54,43 +54,25 @@ static unsigned char Regs4[4] = {99 ,72, 204, 1 };
 static unsigned char  SAWreg[2] =   {75, 210 };  
 // Регистры маяка (19-24): частота, мошность1 - мощность 4, пауза перед первым писком (сек)
 // При неотключаемом SAW, неообходимо ограничить мощность 10 мВт и внести частоту маяка в полосу фильтра
-static unsigned char  BeaconReg[6] =   { 101, 12, 10, 9, 8, 30 };  
+static unsigned char  BeaconReg[6] =   { 101, 4, 2, 1, 0, 30 };  
 static unsigned char pwm1chnl = 4;     // номер первого PWM канала в комбинированном режимме.
 
 // Регистры RSSI (40-42). Задают тип (биби/Вольты) и режим (уровень сигнала или отношение сигнал/шум).
 // RSSIreg[2] - вывод RSSI через PWM выход (1-8)
 static unsigned char  RSSIreg[3] =   { 1, 0, 0 };  
 
+static unsigned char menuFlag=1;              // Флаг, разрешающий работу с меню
+
 //###### SERIAL PORT SPEED #######
 #define SERIAL_BAUD_RATE 38400  // как у Эксперта
-
-//###### SERIAL PPM Type #######
-// Plug a jumper between Ch1 and CH3 for switching your Rx to SerialPPM mode
-// =Serial PPM Types=
-// 0 is classic SerialPPM, disables parallel outputs and uses CH8 for serial PPM output.
-#define SERIAL_PPM_TYPE 0
-
-//###### TELEMETRY MODES ########
-// Разрешаем выдвать экспертовскую телеметрию через UART
-#define UART_TELEMETRY_ENABLED 1  // 1 = Enabled(bidirectional mode)  0 = Disabled(unidirectional mode)
 #define REGS_NUM 42               // количестов отображаемых регистров настроек
 
-//###### SPECTRUM ANALYZER MODE ########
-// the receiver scans the whole band's signal level to finding interferences.
-// It works in a dead loop with this mode. other rx functions disables.
-#define SPECTRUM_ANALYZER_ENABLED 0  // 1 = Enabled  0 = Disabled
-
-
 //###### RSSI MODES ########
-// Analog RSSI pin is Ch0 on v2 receivers. If you enable this function CH8 works as PWM RSSI output.
-// to converting the PWM to voltage, add a capacitor between CH8 signal output and ground. 
-// you can use any capacitors between 1uF and 1000uF. 100uF 16v capacitor works perfect. 
-// uncomment this line(at below) for enabling Analog RSSI function. 
+// Analog RSSI pin is Ch0 on v2 receivers. If you enable this function CH0 works as PWM RSSI output.
 #define Analog_RSSI    
 
 //Serial RSSI is transmitting the RSSI value over serial port. You can use this function for debugging.
 #define Serial_RSSI //Serial RSSI value for analyzing
-
 
 // Channel Names and Numbers
 #define AILERON 0
@@ -109,9 +91,6 @@ static unsigned char  RSSIreg[3] =   { 1, 0, 0 };
 #define RF_PACK_SIZE 16                 /* размер данных в пакете */
 #define RC_CHANNEL_COUNT 12             /* количество каналов управления и импульсов на PPM OUT */
 #define PWM_OUT_NUM 10                   /* количество PWM выходов */
-
-// unsigned char RF_Tx_Buffer[RF_PACK_SIZE]; 
-// unsigned char RS232_Tx_Buffer[RF_PACK_SIZE] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};	//rs232 tx buffer
 
 unsigned char RF_Rx_Buffer[RF_PACK_SIZE];
 unsigned int Servo_Buffer[RC_CHANNEL_COUNT] = {3000,3000,3000,3000,3000,3000,3000,3000,3000,3000,3000,3000};	//servo position values from RF
