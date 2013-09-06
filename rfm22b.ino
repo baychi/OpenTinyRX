@@ -268,33 +268,6 @@ void to_rx_mode(void)
  NOP(); 
 }  
 
-/*****************************************************************
-void to_tx_mode(void) 
-{ 
- unsigned char i;
- to_ready_mode();
- 
-  _spi_write(0x08, 0x03);    // disABLE AUTO TX MODE, enable multi packet clear fifo 
-  _spi_write(0x08, 0x00);    // disABLE AUTO TX MODE, enable multi packet, clear fifo 
-  
-    // ph +fifo mode 
-  _spi_write(0x34, 4);      //  4 nibble = 2byte preamble 
-  _spi_write(0x3e, RF_PACK_SIZE);    // total tx 17 byte 
-
- for (i = 0; i<RF_PACK_SIZE; i++) { 
-  _spi_write(0x7f, RF_Tx_Buffer[i]); 
- } 
- 
- _spi_write(0x05, RF22B_PACKET_SENT_INTERRUPT);  
- ItStatus1 = _spi_read(0x03);      //read the Interrupt Status1 register 
- ItStatus2 = _spi_read(0x04); 
-  _spi_write(0x07, RF22B_PWRSTATE_TX);    // to tx mode 
-
-  while(nIRQ_1);
-
-  to_ready_mode();
-}  
-*****************************************************/
 
 //-------------------------------------------------------------- 
 void to_ready_mode(void) 
@@ -352,9 +325,23 @@ void beacon_tone(int16_t hz, int16_t len) //duration is now in half seconds.
 {
   int16_t d = 500000 / hz; // better resolution
 
-  if (d < 5) {
-    d = 5;
-  }
+  if (d < 5) d = 5;
+
+#if(RX_BOARD_TYPE == 1)
+  _spi_write(0x0e, 0x04);     // зажигаем индикатор
+#else
+  Green_LED_ON
+#endif  
+
+  delay(10);
+
+#if(RX_BOARD_TYPE == 1)
+  _spi_write(0x0e, 0x00);     // гасим индикатор
+#else
+  Green_LED_OFF
+#endif  
+
+  wdt_reset();               //  поддержка сторожевого таймера
 
   int16_t cycles = (len * 250000 / d);
 
@@ -376,7 +363,7 @@ void beacon_send(void)
   _spi_write(0x0a, 0x05);
   _spi_write(0x0b, 0x12);    // gpio0 TX State
   _spi_write(0x0c, 0x15);    // gpio1 RX State
-  _spi_write(0x0d, 0x0a);    // gpio2 - управление SAW фильтром
+  _spi_write(0x0d, 0x0a);    // gpio2 - управление SAW фильтром/или лампочкой
   _spi_write(0x0e, 0x00);    // gpio2=0
 
   _spi_write(0x70, 0x2C);    // disable manchester
@@ -393,44 +380,21 @@ void beacon_send(void)
   _spi_write(0x73, 0x00);
   _spi_write(0x74, 0x00);    // no offset
 
-  frequency_configurator(433);  // фиктивный вызов
+   SAW_FILT_OFF              // SAW disable
+   frequency_configurator(433);  // фиктивный вызов
 
-  _spi_write(0x6d, 0x0f);   // 7 set max power 100mW
-
-//  delay(10);
-//  _spi_write(0x07, RF22B_PWRSTATE_TX);    // to tx mode
-//  delay(10);
-
-  //close encounters tune
-  //  G, A, F, F(lower octave), C
-  //octave 3:  392  440  349  175   261
-
-//  beacon_tone(392, 1);
-
-  Green_LED_ON
   _spi_write(0x6d, (BeaconReg[1]&7)|0x8);   // 5 set mid power 25mW
   delay(10);
   _spi_write(0x07, RF22B_PWRSTATE_TX);    // to tx mode
-  delay(10);
-  Green_LED_OFF
   beacon_tone(440,1);
-
-  Green_LED_ON
+ 
   _spi_write(0x6d, (BeaconReg[2]&7)|0x8);   // 4 set mid power 13mW
-  delay(10);
-  Green_LED_OFF
   beacon_tone(349, 1);
 
-  Green_LED_ON
   _spi_write(0x6d, (BeaconReg[3]&7)|0x8);   // 2 set min power 3mW
-  delay(10);
-  Green_LED_OFF
   beacon_tone(175,1);
 
-  Green_LED_ON
   _spi_write(0x6d, (BeaconReg[4]&7)|0x8);   // 0 set min power 1.3mW
-  delay(10);
-  Green_LED_OFF
   beacon_tone(261, 1);
 
   _spi_write(0x07, RF22B_PWRSTATE_READY);
