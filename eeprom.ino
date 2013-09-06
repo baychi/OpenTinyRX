@@ -11,7 +11,7 @@
 #define REGS_EERPON_ADR 17     /* first byte of eeprom */
 #define FS_EEPROM_ADR   64     /* address of FS settings   */
 #define STAT_EPROM_ADR  88     /* начальный адрес статистики в EEPROM */
-#define LAST_EEPROM_ADR 1024   /* последний адрес статистики в EEPROM для ATMEGA328 = 35*26 байт*/
+unsigned int LAST_EEPROM_ADR=1024;   /* последний адрес статистики в EEPROM для ATMEGA328 = 35*26 байт*/
 
 #define FLASH_SIZE 16384         /* размер контроллируемой памяти программ */
 #define FLASH_SIGN_ADR 6         /* адрес сигнатуры прошивки в EEPROM */
@@ -90,7 +90,8 @@ void load_failsafe_values()
 // Чтение всех настроек
 int read_eeprom(void)
 {
-   unsigned int i, ks=0;
+   unsigned int ks=0;
+   byte i,j;
    
    ks+= Regs4[0] = read_eeprom_uchar(0);          // S/N
    ks+= Regs4[1] = read_eeprom_uchar(1);          // номер линка
@@ -101,6 +102,14 @@ int read_eeprom(void)
   
    // Регистры маяка (19-23): частота, мошность1 - мощность 4.
    for(i=0; i<sizeof(BeaconReg); i++)    ks+=BeaconReg[i] = read_eeprom_uchar(i+19);
+   i=BeaconReg[1];
+   if(i > 7) i=7; 
+// Сформируем ряд убывающих уровней маяка, не больших BeaconReg[1]
+   if(i > 6) j=2; else j=1;
+   if(i > j) i-=j;    BeaconReg[2]=i;
+   if(i > j) i-=j;    BeaconReg[3]=i;
+   if(i > j) i-=j;    BeaconReg[4]=i;
+   
    // Регистры поддержки SAW фильтра (25,26) 
    ks+= SAWreg[0] = read_eeprom_uchar(25);  
    ks+= SAWreg[1] = read_eeprom_uchar(26);  
@@ -124,7 +133,8 @@ int read_eeprom(void)
 // Запись всех настроек
 void write_eeprom(void)
 {
-   unsigned int i, ks=0;
+   unsigned int ks=0;
+   byte i;
    
    write_eeprom_uchar(0,Regs4[0]);     ks+=Regs4[0];      // S/N
    write_eeprom_uchar(1,Regs4[1]);     ks+=Regs4[1];      // номер линка
@@ -159,7 +169,6 @@ void write_eeprom(void)
 
 void eeprom_check(void)              // читаем и проверяем настройки из EEPROM, а также целостность программы
 {
-
   if(flash_check()) {
       if(!satFlag) Serial.println("FLASH ERROR!!! Working unpredictable!");
       Red_LED_Blink(120);  // долго мигаем красным, если КС не сошлась
