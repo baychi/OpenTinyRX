@@ -15,32 +15,33 @@ unsigned int  statAdr=STAT_EPROM_ADR;      // адрес в EEPROM
 
 void statSave(void)    // записать очередную запись во FLASH 
 {
-  unsigned char i; 
+  unsigned char i,div; 
   saveStat.flightNum=flightCntr;
   saveStat.FS=curStat.FS;
   if(failsafe_mode || (PWM_enable == 0)) saveStat.FS |= 0x80;       // признак, что находимся в состоянии FS
   curStat.FS=0;
   
-  if(statCntr == 0) statCntr=1;  // что-бы не делить на ноль
   for(i=0; i<HOPE_NUM; i++) {    // подготовим новую статистику и сохраненние старой
+    if(statCntr[i]) div=statCntr[i];  // что-бы не делить на ноль
+    else div=1;
     saveStat.lost[i]=curStat.lost[i];
-    saveStat.rssi[i]=curStat.rssi[i]/statCntr;
-    saveStat.noise[i]=curStat.noise[i]/statCntr;
+    saveStat.rssi[i]=curStat.rssi[i]/div;
+    saveStat.noise[i]=curStat.noise[i]/div;
 
     curStat.lost[i]=0;
     curStat.rssi[i]=0;
     curStat.noise[i]=0;
+    statCntr[i]=0;
 //    if(saveStat.lost[i] == 0) saveStat[i]=0xff;      // что-бы не писать много 0-й во FLASH  
   } 
   statByte=0;                                       // запускаем фоновую запись
-  statCntr=0;
 }
 
 void statLoop(void)                                 // фоновой цикл записи статистики (максиммум 3 байта за раз
 {
   unsigned char *ptr=(unsigned char *)&saveStat;
   
-  if(Regs4[3] == 0) return;                             // if disabled
+  if(Regs4[4] == 0) return;                             // if disabled
   
   if(statByte < sizeof(saveStat)) {                 
      EEPROM.write(statAdr+statByte,ptr[statByte]);  // пишем байт
@@ -72,7 +73,8 @@ void statInit(void)                            // инициализация с�
 {
    unsigned char i;
 
-   i=boot_signature_byte_get(0x01);            // отличаем Мегу 168 от 328-й
+   i=boot_signature_byte_get(0x02);            // отличаем Мегу 168 от 328-й
+   Serial.print("Mega sign="); Serial.println(i,HEX); 
    if(i != 0x95) LAST_EEPROM_ADR=504;          // 16*26 + 88
 
    statAdr=EEPROM.read(STAT_PTR_ADR);          // читаем указатель на очередную запись
@@ -95,10 +97,11 @@ void statInit(void)                            // инициализация с�
     curStat.lost[i]=0;
     curStat.rssi[i]=0;
     curStat.noise[i]=0;
+    statCntr[i]=0;
   }
   curStat.FS=0;
   statByte=sizeof(saveStat);      // не будем писать, пока не накопим первую запись
-  statCntr=statMin=0;
+  statMin=0;
   statTime=millis();
 }
 
@@ -112,13 +115,16 @@ void print3(unsigned char val)  // печать 3-цифр с выравнива
 
 void statShow(unsigned char mode)                  // вывести статистику на экран
 {
-   int i,j,n=0;
+   int i;
+   byte j,n=0;
    unsigned char tmp,fn=0;
    unsigned char fs= (mode == 's') || (mode ==  'S');   // признак вывода только статистики пакетов
    unsigned char fl= (mode == 'l') || (mode ==  'L');   // признак вывода только уровней
+   unsigned char fd= (mode == 'd') || (mode ==  'D');   // признак вывода битой статистики
    
    if(!fs && !fl) fs=fl=1;                              // полный вывод
-   Serial.print("Last statisics: "); Serial.println(statAdr);
+   Serial.print("Last statisics:("); Serial.print(STAT_EPROM_ADR); Serial.print("-"); 
+   Serial.print(LAST_EEPROM_ADR);  Serial.print(") form ");  Serial.println(statAdr);
    Serial.print("FN  cnt ");
    if(fs) Serial.print("FSn InFS  Drops:1   2   3   4   5   6   7   8  ");
    if(fl) Serial.println("RSSI:1   2   3   4   5   6   7   8 Noise:1   2   3   4   5   6   7   8");
@@ -127,7 +133,7 @@ void statShow(unsigned char mode)                  // вывести стати�
    i=statAdr;
    while(1) {
      j=EEPROM.read(i++);               // номер полета
-     if(j > 100) {                     //  стертая запись или бракованная
+     if(j > 100 && fd == 0) {          //  стертая запись или бракованная
        i+=(sizeof(saveStat)-1);        // пропускаем стертые записи
      } else {
        if(j != fn) { n=0; fn=j; }         // счетчик записей внутри полета
