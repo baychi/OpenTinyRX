@@ -47,7 +47,7 @@ void write_eeprom_uchar(int address,unsigned char value)
 // Проверка целостности прошивки
 //
 
-int flash_check(void)
+byte flash_check(void)
 {
   unsigned int i,sign,ks=0;
   
@@ -71,7 +71,7 @@ int flash_check(void)
 // сохранение настроек FS
 void save_failsafe_values(void)
 {
-  for (int i=0;i<RC_CHANNEL_COUNT;i++)   {
+  for (byte i=0;i<RC_CHANNEL_COUNT;i++)   {
      EEPROM.write(FS_EEPROM_ADR+(2*i),Servo_Buffer[i] / 256); 
      EEPROM.write(FS_EEPROM_ADR+1+(2*i),Servo_Buffer[i] & 0xFF);
    } 
@@ -81,34 +81,33 @@ void save_failsafe_values(void)
 //
 void load_failsafe_values()
 {
-   for(int i=0; i<RC_CHANNEL_COUNT; i++)   {
+   for(byte i=0; i<RC_CHANNEL_COUNT; i++)   {
      Servo_Buffer[i] = (EEPROM.read(FS_EEPROM_ADR+(2*i)) * 256) + EEPROM.read(FS_EEPROM_ADR+(2*i)+1);
      if(Servo_Buffer[i] < 1900 || Servo_Buffer[i] > 4100) Servo_Buffer[i]=3000;             // защита от некорретных данных
   }  
 }
 
 // Чтение всех настроек
-int read_eeprom(void)
+byte read_eeprom(void)
 {
    unsigned int ks=0;
    byte i,j;
-   
-   ks+= Regs4[0] = read_eeprom_uchar(0);          // S/N
-   ks+= Regs4[1] = read_eeprom_uchar(1);          // номер линка
-   ks+= Regs4[2] = read_eeprom_uchar(2);          // поправка частоты
-   ks+= Regs4[3] = read_eeprom_uchar(3);          // разрешение статистики
+
+   for(i=0; i<sizeof(Regs4); i++)      // S/N, номер линка, поправка частоты, разрешение статистики, servostrech
+     ks+= Regs4[i] = read_eeprom_uchar(i); 
+     
    // hopping channels
    for(i=0; i<HOPE_NUM; i++)  ks+=hop_list[i] = read_eeprom_uchar(i+11);
   
    // Регистры маяка (19-23): частота, мошность1 - мощность 4.
    for(i=0; i<sizeof(BeaconReg); i++)    ks+=BeaconReg[i] = read_eeprom_uchar(i+19);
-   i=BeaconReg[1];
-   if(i > 7) i=7; 
+
 // Сформируем ряд убывающих уровней маяка, не больших BeaconReg[1]
-   if(i > 6) j=2; else j=1;
+   i=BeaconReg[1];   if(i > 7) i=7; 
+   if(i >= 6) j=2; else j=1;
    if(i > j) i-=j;    BeaconReg[2]=i;
    if(i > j) i-=j;    BeaconReg[3]=i;
-   if(i > j) i-=j;    BeaconReg[4]=i;
+   BeaconReg[4]=0;
    
    // Регистры поддержки SAW фильтра (25,26) 
    ks+= SAWreg[0] = read_eeprom_uchar(25);  
@@ -136,10 +135,10 @@ void write_eeprom(void)
    unsigned int ks=0;
    byte i;
    
-   write_eeprom_uchar(0,Regs4[0]);     ks+=Regs4[0];      // S/N
-   write_eeprom_uchar(1,Regs4[1]);     ks+=Regs4[1];      // номер линка
-   write_eeprom_uchar(2,Regs4[2]);     ks+=Regs4[2];      // поправка частоты
-   write_eeprom_uchar(3,Regs4[3]);     ks+=Regs4[3];      // разрешение статистиуки
+   for(i=0; i<sizeof(Regs4); i++) {      // S/N, номер линка, поправка частоты, разрешение статистики, servostrech
+     write_eeprom_uchar(i,Regs4[i]);
+     ks+=Regs4[i];      
+   }     
 
    // hopping channels
    for(i=0; i<HOPE_NUM; i++) {
