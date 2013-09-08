@@ -159,22 +159,8 @@ void RF22B_init_parameter(void)
   _spi_write(0x38, 0x00);    // 1
   _spi_write(0x39, 0x00);    // 0
 
-//  _spi_write(0x3a, Regs4[0]);    // tx header 
-//  _spi_write(0x3b, Regs4[1]);    // реально не используются
-//  _spi_write(0x3c, Regs4[2]); 
-//  _spi_write(0x3d, Regs4[3]); 
   _spi_write(0x3e, RF_PACK_SIZE);    // total tx 16 byte 
    
-    //RX HEADER
-// _spi_write(0x3f, Regs4[0]);   // check hearder не используется !!!!
-// _spi_write(0x40, Regs4[1]); 
-// _spi_write(0x41, Regs4[2]); 
-// _spi_write(0x42, Regs4[3]); 
-// _spi_write(0x43, 0xff);    // all the bit to be checked 
-// _spi_write(0x44, 0xff);    // all the bit to be checked 
-// _spi_write(0x45, 0xff);    // all the bit to be checked 
-// _spi_write(0x46, 0xff);    // all the bit to be checked 
-  
   _spi_write(0x6d, 0x0f);    // 7 set power max TX power 
 // 7400 bps data rate
   _spi_write(0x6e, 0x3C); //  RATE_7400 
@@ -187,16 +173,12 @@ void RF22B_init_parameter(void)
 
   _spi_write(0x71, 0x23);  // Gfsk,  fd[8] =0, no invert for Tx/Rx data, fifo mode, txclk -->gpio 
   _spi_write(0x72, 0x0E);  // frequency deviation setting to 8750
-//  _spi_write(0x73, 0x00);  // frquensy offset 
-//  _spi_write(0x74, 0x00);    // no offset 
  
 
   //band 434.075
  _spi_write(0x75, 0x53);   // 433075 кГц  
  _spi_write(0x76, 0x4C);    
  _spi_write(0x77, 0xE0); 
-// _spi_write(0x06, 0x10);    // Enable RSSI interrupt
-
 }
 
 
@@ -321,11 +303,13 @@ void frequency_configurator(long frequency)
 
 // Маяк из проекта KHA
 
-void beacon_tone(int16_t hz, int16_t len) //duration is now in half seconds.
+void beacon_tone(int16_t hz, int16_t len, byte pow) //duration is now in half seconds.
 {
   int16_t d = 500000 / hz; // better resolution
 
   if (d < 5) d = 5;
+
+  _spi_write(0x6d, (pow&7)|0x8);   // устанавливаем мощность
 
 #if(RX_BOARD_TYPE == 1)
   _spi_write(0x0e, 0x04);     // зажигаем индикатор
@@ -386,16 +370,10 @@ void beacon_send(void)
   _spi_write(0x6d, (BeaconReg[1]&7)|0x8);   // 5 set mid power 25mW
   delay(10);
   _spi_write(0x07, RF22B_PWRSTATE_TX);    // to tx mode
-  beacon_tone(440,1);
- 
-  _spi_write(0x6d, (BeaconReg[2]&7)|0x8);   // 4 set mid power 13mW
-  beacon_tone(349, 1);
-
-  _spi_write(0x6d, (BeaconReg[3]&7)|0x8);   // 2 set min power 3mW
-  beacon_tone(175,1);
-
-  _spi_write(0x6d, (BeaconReg[4]&7)|0x8);   // 0 set min power 1.3mW
-  beacon_tone(261, 1);
+  beacon_tone(440, 1 ,BeaconReg[1]);
+  beacon_tone(349, 1, BeaconReg[2]);
+  beacon_tone(175, 1, BeaconReg[3]);
+  beacon_tone(261, 1, BeaconReg[4]);
 
   _spi_write(0x07, RF22B_PWRSTATE_READY);
 }
