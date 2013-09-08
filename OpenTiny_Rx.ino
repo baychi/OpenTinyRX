@@ -91,8 +91,6 @@ void setup()
         pinMode(Servo10_OUT, OUTPUT); //Servo10
         
         Serial.begin(SERIAL_BAUD_RATE); //Serial Transmission 
-//        Wire.begin(); //I2C Transmission
-        
         
        INIT_SERVO_DRIVER();
        
@@ -428,7 +426,7 @@ hotRest:
           #endif
           curStat.rssi[hopping_channel] += N_RSSI;     // для статистики
           curStat.noise[hopping_channel] += Pause_RSSI;
-          if(hopping_channel == 7) statCntr++;         // считаем циклы
+          statCntr[hopping_channel]++;                 // считаем циклы
         
 // 
 // Подстройка частоты
