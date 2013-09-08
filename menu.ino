@@ -1,9 +1,10 @@
 // Функции меню терминала
 //
-static unsigned char regs[] = {1, 2, 3, 11,12,13,14,15,16,17,18,19,20,24,25,26,28,40,41,42 } ;
+static unsigned char regs[] = {1, 2, 3, 4, 11,12,13,14,15,16,17,18,19,20,24,25,26,28,40,41,42 } ;
 static char *help[] = {
   "Bind N",
   "Freq Corr",
+  "Servo 150% strech num (1-12)", 
   "Statistics enable",
   "Hope F1",
   "Hope F2",
@@ -28,7 +29,7 @@ static char *help[] = {
 void showRegs(void)         // показать значения регистров
 {
   unsigned char i,j=0;
-  for(int i=1; i<=REGS_NUM; i++) {
+  for(i=1; i<=REGS_NUM; i++) {
     if(regs[j] == i) {
       Serial.print(i);
       Serial.print("=");
@@ -41,7 +42,7 @@ void showRegs(void)         // показать значения регистр�
 }
 
 
-int checkMenu(void)   // проверка на вход в меню
+byte checkMenu(void)   // проверка на вход в меню
 {
    int in; 
    
@@ -64,7 +65,7 @@ void getStr(char str[])             // получение строки, заве
         menuFlag=0;              // запрещаем меню
         return;
       }
-       in= Serial.read();             // все, что пришло, отображаем
+       in=Serial.read();             // все, что пришло, отображаем
        if(in > 0) {
           Serial.write(in);
           if(in == 0xd || in == 0xa) {
@@ -87,6 +88,7 @@ void doMenu()                       // работаем с меню
 {
   char str[8];
   int reg,val;
+
   Serial.println("To Enter MENU Press ENTER");
   getStr(str);
   if(str[0] == 'q' || str[0] == 'Q') return;     // Q - то quit
