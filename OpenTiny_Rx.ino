@@ -193,6 +193,29 @@ ISR(TIMER1_OVF_vect)
   TCNT1 = 40000 - us; // configure the timer interrupt for X micro seconds     
 }
 
+
+// Вывод RSSI с усреденнием
+//
+#if defined(Analog_RSSI) 
+
+static word curAvr=0;
+
+void OutRSSI(byte val, byte weight)
+{
+  byte avr,navr=RSSIreg[0];     // тип вывода или степень усреднения
+  
+  if(navr == 0) {               // режим би-би
+    if(val == 0) avr=127;       // пищим, когда пакет потерян
+    else avr=0; 
+  } else {                      // режим усреденеия
+    curAvr=curAvr-curAvr/navr + val*weight;
+    avr=curAvr/navr;
+  }
+   analogWrite(RSSI_OUT,avr);
+//   Serial.print(navr); Serial.print(" "); Serial.println(val);
+}
+#endif
+
 unsigned char read_8bit_data(void); 
 void to_ready_mode(void); 
 void send_8bit_data(unsigned char i); 
@@ -321,9 +344,7 @@ hotRest:
           load_failsafe_values(); // Load Failsafe positions from EEPROM
           Direct_Servo_Drive(); // Set directly the channels form Servo buffer
           Red_LED_OFF;
-          #if defined(Analog_RSSI) 
-              analogWrite(RSSI_OUT,0); 
- 	  #endif
+          OutRSSI(0,8);        // нет связи, нет RSSI
           curStat.FS++;        // для статистики 
         } 
 
@@ -353,10 +374,7 @@ hotRest:
             else last_hopping_time += 31;                  // добавляем 31.5 мс в среднем
           } else last_hopping_time=time;
                                
-          #if defined(Analog_RSSI) 
-           if(RSSIreg[0]) analogWrite(RSSI_OUT,0);         // режим RSSI
-           else analogWrite(RSSI_OUT,127);                // режим би-би 
-  	  #endif
+          OutRSSI(0,search_mode*7+1);                       // выводим 0-й RSSI
                                
           if(!satFlag) {
              Serial.print("$RL");
@@ -406,12 +424,9 @@ hotRest:
           if(Pause_RSSI > Rx_RSSI) Rx_RSSI=0;     // и вычисляем отношение C/Ш
           else Rx_RSSI-=Pause_RSSI;               // вместо простого РСИИ
                                  
-          #if defined(Analog_RSSI) 
-            if(RSSIreg[1]) lastRSSI=Rx_RSSI;   // RSSI level
-            else lastRSSI=N_RSSI;               // or s/n ratio
-            if(RSSIreg[0]) analogWrite(RSSI_OUT,lastRSSI);      // режим RSSI
-            else analogWrite(RSSI_OUT,0);    // режим би-би
-          #endif
+          if(RSSIreg[1]) lastRSSI=Rx_RSSI;        // RSSI level
+          else lastRSSI=N_RSSI;                   // or s/n ratio
+          OutRSSI(lastRSSI,1);                     // выводим RSSI
 				 
           temp_int=_spi_read(0x2B);   // читаем отклонение частоты
 
