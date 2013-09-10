@@ -11,7 +11,7 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 5, 1};
+unsigned char version[] = { 5, 4 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -308,4 +308,5 @@ unsigned long lastSatTime=0;            // время приема послед�
      #define Serial_PPM_OUT_HIGH PORTD |= _BV(7) //Serial PPM out on Servo 3
 //      #define Serial_PPM_OUT_HIGH PORTB = _BV(4) //Serial PPM out on Servo 8
 #endif
+
 
