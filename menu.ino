@@ -20,7 +20,7 @@ static char *help[] = {
   "SAW Fmin",
   "SAW Fmax",
   "PPM mode 1st PWM chnl (1-8) [4]", 
-  "RSSI type: sound(0)/level(1)",
+  "RSSI type: sound(0)/level(1-99: average factor)",
   "RSSI mode: level(0)/SN ratio(1)",
   "RSSI over PWM (ch num:1-12) 0- not use"
 };  
