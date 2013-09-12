@@ -74,8 +74,8 @@ void statInit(void)                            // инициализация с�
    unsigned char i;
 
    i=boot_signature_byte_get(0x02);            // отличаем Мегу 168 от 328-й
-   Serial.print("Mega sign="); Serial.println(i,HEX); 
-   if(i != 0x95) LAST_EEPROM_ADR=504;          // 16*26 + 88
+//   Serial.print("Mega sign="); Serial.println(i,HEX); 
+   if(i == 0x94) LAST_EEPROM_ADR=504;          // 16*26 + 88
 
    statAdr=EEPROM.read(STAT_PTR_ADR);          // читаем указатель на очередную запись
    statAdr += EEPROM.read(STAT_PTR_ADR+1)*256; 
