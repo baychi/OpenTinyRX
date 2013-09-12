@@ -212,6 +212,7 @@ void OutRSSI(byte val, byte weight)
     avr=curAvr/navr;
   }
    analogWrite(RSSI_OUT,avr);
+   lastRSSI=avr;
 //   Serial.print(navr); Serial.print(" "); Serial.println(val);
 }
 #endif
