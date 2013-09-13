@@ -238,7 +238,8 @@ void loop()
   int temp_int, afc_avr=0;
   unsigned char tempAfc=199;     // временная поправка частоты 
 
-  int tdif, btime, next_time = 35;    // время ожидания следующего пакета
+  unsigned long tdif, btime;
+  int next_time = 35;    // время ожидания следующего пакета
   
   receiver_mode = check_modes(0); // Check the possible jumper positions for changing the receiver mode.
   if(receiver_mode) {
@@ -516,4 +517,3 @@ hotRest:
   }  // --------------------------------------- конец основного цикла ----------------------------------------
 	 
 }
-
