@@ -11,7 +11,7 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 5, 4 };
+unsigned char version[] = { 6, 5 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -30,7 +30,7 @@ unsigned char version[] = { 5, 4 };
 // Интервал между сериями писков маяка
 #define BEACON_INTERVAL 4999
 // Время для входа в меню
-#define MENU_WAIT_TIME 4999
+#define MENU_WAIT_TIME 9999
 
 //######### TRANSMISSION VARIABLES ##########
 //!!! These values configurable over PC with OpenLRS Configurator Software
