@@ -20,4 +20,9 @@ RX Firmware for openLRS compatible with Expert 2G/Tiny LRS
 
 - Added analog RSSI averaging. Reg 40 in 1-255 value is averaging factor
 - Reg 4 chaged with reg3 for original Expert compatibility
-- 
+
+15 sep 2013 (version F6)
+- Added noise level measuring from menu
+- added noise level output without recieving
+- minor constant corrections
+
