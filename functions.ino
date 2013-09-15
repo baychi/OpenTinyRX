@@ -39,6 +39,10 @@ void Red_LED_Blink(unsigned short blink_count)
   unsigned char i;
   for (i=0;i<blink_count;i++)     {
      delay(125);
+     if(blink_count > 10 && checkMenu()) {            // в долгих ситуациях даем возможность входа в меню
+       doMenu();
+       return; 
+     }
      Red_LED_ON;
      delay(125);
      Red_LED_OFF;
