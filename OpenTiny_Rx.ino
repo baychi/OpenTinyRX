@@ -238,7 +238,7 @@ void loop()
   int temp_int, afc_avr=0;
   unsigned char tempAfc=199;     // временная поправка частоты 
 
-  unsigned long tdif, btime;
+  long tdif, btime;
   int next_time = 35;    // время ожидания следующего пакета
   
   receiver_mode = check_modes(0); // Check the possible jumper positions for changing the receiver mode.
@@ -281,7 +281,7 @@ void loop()
     Serial.print("T="); 
     Serial.println(_spi_read(0x11)-0x40);  // читаем температуру из АЦП
  
-    Serial.println("If need menu - press 'm' in 5 sec");  // реальное время задано константой
+    Serial.println("If need menu - press 'm' in 10 sec");  // реальное время задано константой
  }
   
 hotRest:
@@ -352,19 +352,20 @@ hotRest:
 
         // в зависимости от того сколько прошло ждем пакеты синхроннно или асинхронно
         if(time-self_pack_time > TIME_TO_SEARCH) search_mode=1;
+        if(tdif  < 7) {                  // первые 7 мс всегда меряем уровень шума
+             delayMicroseconds(299);
+	     Pause_RSSI += _spi_read(0x26);       // Read the RSSI value
+             N_pause++;                           // для усреднения
+        }
 	if(search_mode) next_time = 255;         // включаем режим поиска
         else {                                   // или продолжнаем ловить в заданное время
            next_time = 35;	
 // Операции во время ожидания пакета
-           if(tdif  < 5) {                  // первые 5 мс меряем уровень шума
-             delayMicroseconds(299);
-	     Pause_RSSI += _spi_read(0x26);       // Read the RSSI value
-             N_pause++;                           // для усреднения
-          } else if(tdif > 9 && tdif < 19) {            // где-то в середине пакета читаем RSSI 
-             delay(1);
+           if(tdif > 9 && tdif < 19) {            // где-то в середине пакета читаем RSSI 
+             delayMicroseconds(499);
              Rx_RSSI += _spi_read(0x26);         // Read the RSSI value
              N_RSSI++;                           // для усреднения
-           } else if(tdif < 23) statLoop();      // работаем со статичтикой, которая может сожрать до 4 мс
+           } else if(tdif < 23) statLoop();      // работаем со статиcтикой, которая может сожрать до 4 мс
        }
                         
 // Переход к новому каналу, если пакет не получен в заданное время
@@ -380,7 +381,16 @@ hotRest:
                                
           if(!satFlag) {
              Serial.print("$RL");
-             Serial.println(++rl_counter);
+             Serial.print(++rl_counter);
+          #if defined(Serial_RSSI)
+//          if(search_mode == 0) {
+             if(N_pause) Pause_RSSI /= N_pause;      // вычислим средний шум в паузе
+             Serial.print(" S=");   Serial.print(statMin); 
+             Serial.print(" C=");   Serial.print(hopping_channel+1);
+             Serial.print(" Rn=");  Serial.print(Pause_RSSI);  // уровень шума
+          //}
+          #endif
+             Serial.println();
           } 
                       
           curStat.lost[hopping_channel]++;                // для статистики
@@ -444,7 +454,7 @@ hotRest:
           curStat.rssi[hopping_channel] += N_RSSI;     // для статистики
           curStat.noise[hopping_channel] += Pause_RSSI;
           statCntr[hopping_channel]++;                 // считаем циклы
-        
+       
 // 
 // Подстройка частоты
           if(Regs4[2] != 0) {                          // в ручном режиме не работает  
@@ -476,10 +486,10 @@ hotRest:
         }
                                  
         Hopping(); //Hop to the next frequency
+        last_hopping_time = time;    
         delay(1);
                                 
         RF_Mode = Receive;              // Start next packet wait
-        last_hopping_time = time;    
         Green_LED_OFF;
      }
 //
@@ -517,3 +527,4 @@ hotRest:
   }  // --------------------------------------- конец основного цикла ----------------------------------------
 	 
 }
+
