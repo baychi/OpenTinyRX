@@ -1,3 +1,13 @@
+// **********************************************************
+// Baychi soft 2013
+// **      RFM22B/23BP/Si4432 Reciever with Expert protocol **
+// **      This Source code licensed under GPL            **
+// **********************************************************
+// Latest Code Update : 2013-10-22
+// Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
+// Project page       : https://github.com/baychi/OpenTinyRX
+// **********************************************************
+
 #include <avr/boot.h>
 #define SIGRD 5                     // бит регистров идентификации для boot_signature_byte_get
 
@@ -55,7 +65,6 @@ void statLoop(void)                                 // фоновой цикл �
   } else if(statByte == sizeof(saveStat)+1) {
         EEPROM.write(STAT_PTR_ADR,statAdr&0xff);
         statByte++;
-//      if(!satFlag) Serial.print("SS end "); Serial.println(statAdr);
   } else if(statByte == sizeof(saveStat)+2){
        statByte++;
        if(statMin == 0)  EEPROM.write(STAT_FLIGHT_ADR,flightCntr);  // номер полета пишем после первой заиси, что-бы не суетится
@@ -65,7 +74,6 @@ void statLoop(void)                                 // фоновой цикл �
   if((time-statTime)/1000 >= STAT_INTERVAL) {      // интервал истек 
       statTime=time;
       statSave();                                  // запустим сохранение очередной записи
-//    if(!satFlag)  Serial.print("SS beg "); Serial.println(flightCntr);
   }
 }  
 
@@ -105,13 +113,22 @@ void statInit(void)                            // инициализация с�
   statTime=millis();
 }
 
+void printSpace(byte n)         // печать n пробелов
+{
+   for(; n>0; n--) Serial.write(' ');
+}  
+
 void print3(unsigned char val)  // печать 3-цифр с выравниваем пробелами
 {
-  if(val < 10) Serial.print("  ");
-  else if(val <100) Serial.print(" ");
+  if(val < 10) printSpace(2);
+  else if(val <100) Serial.write(' ');
   Serial.print(val);
-  Serial.print(" ");
+  Serial.write(' ');
 }  
+
+char stxt1[] PROGMEM = "FSn InFS  Drops:1   2   3   4   5   6   7   8  ";
+char stxt2[] PROGMEM = "RSSI:1   2   3   4   5   6   7   8 Noise:1   2   3   4   5   6   7   8";
+
 
 void statShow(unsigned char mode)                  // вывести статистику на экран
 {
@@ -126,9 +143,9 @@ void statShow(unsigned char mode)                  // вывести стати�
    Serial.print("Last statisics:("); Serial.print(STAT_EPROM_ADR); Serial.print("-"); 
    Serial.print(LAST_EEPROM_ADR);  Serial.print(") form ");  Serial.println(statAdr);
    Serial.print("FN  cnt ");
-   if(fs) Serial.print("FSn InFS  Drops:1   2   3   4   5   6   7   8  ");
-   if(fl) Serial.println("RSSI:1   2   3   4   5   6   7   8 Noise:1   2   3   4   5   6   7   8");
-   else Serial.println("");
+   if(fs) printlnPGM(stxt1,0);
+   if(fl) printlnPGM(stxt2);
+   else Serial.println();
 
    i=statAdr;
    while(1) {
@@ -143,23 +160,23 @@ void statShow(unsigned char mode)                  // вывести стати�
        if(fs) {            
          tmp=EEPROM.read(i++);              // кол-во FS
          print3(tmp&0x7f);                  // перчатаем FS
-         Serial.print(" ");                 // выравнивание  
+         Serial.write(' ');                 // выравнивание  
          print3((tmp&0x80) == 0x80);        // печатаем признак FS в конце записи
      
-         Serial.print("     ");              // выравнивание  
+         printSpace(5);              // выравнивание  
          for(j=0; j<HOPE_NUM; j++) print3(EEPROM.read(i++));  // печатаем потери пакетов
        } else i+=9;
 
        if(fl) {
-         Serial.print("   ");              // выравнивание  
-         if(fs) Serial.print(" ");         // маленькая хитрость, чтобы вписаться в 80 символов
+         printSpace(3);                   // выравнивание  
+         if(fs) Serial.write(' ');         // маленькая хитрость, чтобы вписаться в 80 символов
          for(j=0; j<HOPE_NUM; j++) print3(EEPROM.read(i++));  // печатаем RSSI
 
-         Serial.print("    ");              // выравнивание  
+         printSpace(4);                 // выравнивание  
          for(j=0; j<HOPE_NUM; j++) print3(EEPROM.read(i++));  // печатаем шум
        } else i+=16;
        
-       Serial.println("");
+       Serial.println();
        wdt_reset();               //  поддержка сторожевого таймера
      }
      if(i >= LAST_EEPROM_ADR) i=STAT_EPROM_ADR;
@@ -172,7 +189,7 @@ void statErase(void)                  // стирание статистики
   Serial.print("Statistics in EEPROM erase ");
   for(int i=STAT_EPROM_ADR; i<LAST_EEPROM_ADR; i++) {
        EEPROM.write(i,0xff);
-       if((i&0x7f) == 0) Serial.print(".");
+       if((i&0x7f) == 0) Serial.write('.');
        wdt_reset();               //  поддержка сторожевого таймера
   }
   statAdr=STAT_EPROM_ADR;
