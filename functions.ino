@@ -1,12 +1,12 @@
 // **********************************************************
-// **                   OpenLRS Functions                  **
-// **        Developed by Melih Karakelle on 2010-2011     **
-// **          This Source code licensed under GPL         **
+// Baychi soft 2013
+// **      RFM22B/23BP/Si4432 Reciever with Expert protocol **
+// **      This Source code licensed under GPL            **
 // **********************************************************
-// Latest Code Update : 2013-08-17
-// Supported Hardware : Open Tiny LRS Rx boards (store.flytron.com)
-// Project Forum      : http://forum.flytron.com/viewforum.php?f=7
-// Google Code Page   : http://code.google.com/p/openlrs/
+// Latest Code Update : 2013-10-22
+// Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
+// Project page       : https://github.com/baychi/OpenTinyRX
+// **********************************************************
 
 
 void INIT_SERVO_DRIVER(void)
@@ -136,18 +136,8 @@ void Buf_To_Servo(unsigned char buf[])
 
 void Direct_Servo_Drive(void)         // перекидываем ширины вых. импульсов из временного буфера в рабочий
 {
-    Servo_Position[AILERON] = Servo_Buffer[AILERON];  
-    Servo_Position[ELEVATOR] = Servo_Buffer[ELEVATOR];  
-    Servo_Position[THROTTLE] = Servo_Buffer[THROTTLE];  
-    Servo_Position[RUDDER] = Servo_Buffer[RUDDER];  
-    Servo_Position[RETRACTS] = Servo_Buffer[RETRACTS];  
-    Servo_Position[FLAPS] = Servo_Buffer[FLAPS];  
-    Servo_Position[AUX1] = Servo_Buffer[AUX1];  
-    Servo_Position[AUX2] = Servo_Buffer[AUX2];  
-    Servo_Position[AUX3] = Servo_Buffer[AUX3];  
-    Servo_Position[AUX4] = Servo_Buffer[AUX4];  
-    Servo_Position[AUX5] = Servo_Buffer[AUX5];  
-    Servo_Position[AUX6] = Servo_Buffer[AUX6];  
+    for(byte i=0; i<RC_CHANNEL_COUNT; i++) 
+      Servo_Position[i] = Servo_Buffer[i];  
   
     if(RSSIreg[2]) 
        Servo_Position[RSSIreg[2]-1]=(lastRSSI*8)+2000;    // выводим RSSI вместо одно из каналов 
