@@ -1,22 +1,21 @@
-// ***********************************************************
-// ***          OpenLRS Rx Configuration file               **
-// **        Developed by Melih Karakelle on 2010-2011      **
-// **       This Source code licensed under GPL             **
-// ***********************************************************
-// Version Number     : 1.10
-// Latest Code Update : 2011-10-04
-// Supported Hardware : OpenLRS Rx boards (store.flytron.com)
-// Project Forum      : http://forum.flytron.com/viewforum.php?f=7
-// Google Code Page   : http://code.google.com/p/openlrs/
+// **********************************************************
+// Baychi soft 2013
+// **      RFM22B/23BP/Si4432 Reciever with Expert protocol **
+// **      This Source code licensed under GPL            **
+// **********************************************************
+// Latest Code Update : 2013-10-22
+// Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
+// Project page       : https://github.com/baychi/OpenTinyRX
+// **********************************************************
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 6, 5 };
+unsigned char version[] = { 6, 1 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
 // 2 = Rx Open/orange v2 Board
-#define RX_BOARD_TYPE 2
+#define RX_BOARD_TYPE 1
 
 //######### DEBUG MODES ##########
 // 0 = No Debug Output
@@ -65,8 +64,8 @@ static unsigned char  RSSIreg[3] =   { 1, 0, 0 };
 static unsigned char menuFlag=1;              // Флаг, разрешающий работу с меню
 
 //###### SERIAL PORT SPEED #######
-#define SERIAL_BAUD_RATE 38400  // как у Эксперта
-#define REGS_NUM 42               // количестов отображаемых регистров настроек
+#define SERIAL_BAUD_RATE 38400    // как у Эксперта
+#define REGS_NUM 42               // номер последнего используемого регистра настроек
 
 //###### RSSI MODES ########
 // Analog RSSI pin is Ch0 on v2 receivers. If you enable this function CH0 works as PWM RSSI output.
@@ -309,4 +308,5 @@ unsigned long lastSatTime=0;            // время приема послед�
 //      #define Serial_PPM_OUT_HIGH PORTB = _BV(4) //Serial PPM out on Servo 8
 #endif
 
+void printlnPGM(char *adr, char ln=1);   // печать строки из памяти программы ln - перевод строки
 
