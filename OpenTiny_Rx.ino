@@ -1,14 +1,11 @@
 // **********************************************************
-// ******************   Open Tiny Rx Code   *******************
-// *** Based on original code from Melih Karakelle on 2010-2011  ***
-// **  an Arudino based RC Rx/Tx system with extra futures **
-// **       This Source code licensed under GPL            **
+// Baychi soft 2013
+// **      RFM22B/23BP/Si4432 Reciever with Expert protocol **
+// **      This Source code licensed under GPL            **
 // **********************************************************
-// Version Number     : 1.12
-// Latest Code Update : 2012-03-21
-// Supported Hardware : OpenLRS Rx boards (store.flytron.com)
-// Project Forum      : http://forum.flytron.com/viewforum.php?f=7
-// Google Code Page   : http://code.google.com/p/openlrs/
+// Latest Code Update : 2013-10-22
+// Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
+// Project page       : https://github.com/baychi/OpenTinyRX
 // **********************************************************
 // # PROJECT DEVELOPERS # 
 // Melih Karakelle (http://www.flytron.com) (forum nick name: Flytron)
@@ -76,7 +73,8 @@ void setup()
         
         pinMode(0, INPUT); // Serial Rx
         pinMode(1, OUTPUT);// Serial Tx
-        
+        digitalWrite(0, HIGH); // pull up
+
         pinMode(RSSI_OUT, OUTPUT); //RSSI pinout
         
         pinMode(Servo1_OUT, OUTPUT); //Servo1
@@ -229,6 +227,8 @@ unsigned char _spi_read(unsigned char address);
 void Write8bitcommand(unsigned char command); 
 void to_sleep_mode(void); 
 
+char htxt2[] PROGMEM = "Press 'm' to start MENU in 10 sec";
+
 //############ MAIN LOOP ##############
 void loop() 
 {
@@ -251,9 +251,8 @@ void loop()
   Red_LED_Blink(1); // Red LED blink
 
   if(!satFlag) {
-     Serial.println("Baychi soft 2013");
-     Serial.print("RX Open Tiny V2 F"); Serial.println(version[0]);
-     Red_LED_Blink(1); // Red LED blink
+    printHeader();
+    Red_LED_Blink(1); // Red LED blink
   }
   eeprom_check(); 
   statInit();         // инициализируем статистику
@@ -261,7 +260,6 @@ void loop()
   load_failsafe_values();   // Load failsafe values on startup
   RF22B_init_parameter(); // Configure the RFM22B's registers
 
-  frequency_configurator(CARRIER_FREQUENCY); // Calibrate the RFM22B to this frequency, frequency hopping starts from here.
   PWM_enable=0;
   wdt_enable(WDTO_1S);     // запускаем сторожевой таймер 
 //  wdt_enable(WDTO_250MS);     // запускаем сторожевой таймер 
@@ -281,7 +279,7 @@ void loop()
     Serial.print("T="); 
     Serial.println(_spi_read(0x11)-0x40);  // читаем температуру из АЦП
  
-    Serial.println("If need menu - press 'm' in 10 sec");  // реальное время задано константой
+    printlnPGM(htxt2);  // реальное время задано константой
  }
   
 hotRest:
@@ -500,7 +498,7 @@ hotRest:
           satRecFlag=0;
     	  beacon_flag=failsafe_mode = 0; // deactivate failsafe mode
           last_beacon_time=last_pack_time = time;
-          if(!satFlag) { Serial.print("$SAT");   Serial.println(""); }
+          if(!satFlag) { Serial.println("$SAT");  }
           else Serial.write(satIn,SAT_PACK_LEN);  // Отсылаем пакет следующему в цепочке
       }
 
