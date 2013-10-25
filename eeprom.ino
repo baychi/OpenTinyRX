@@ -1,12 +1,12 @@
 // **********************************************************
-// **                OpenLRS EEPROM Functions              **
-// **        Developed by Melih Karakelle on 2010-2012     **
-// **          This Source code licensed under GPL         **
+// Baychi soft 2013
+// **      RFM22B/23BP/Si4432 Reciever with Expert protocol **
+// **      This Source code licensed under GPL            **
 // **********************************************************
-// Latest Code Update : 2012-03-09
-// Supported Hardware : OpenLRS Rx-Tx boards (store.flytron.com)
-// Project Forum      : http://forum.flytron.com/viewforum.php?f=7
-// Google Code Page   : http://code.google.com/p/openlrs/
+// Latest Code Update : 2013-10-22
+// Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
+// Project page       : https://github.com/baychi/OpenTinyRX
+// **********************************************************
 
 #define REGS_EERPON_ADR 17     /* first byte of eeprom */
 #define FS_EEPROM_ADR   64     /* address of FS settings   */
@@ -110,17 +110,18 @@ byte read_eeprom(void)
    BeaconReg[4]=0;
    
    // Регистры поддержки SAW фильтра (25,26) 
-   ks+= SAWreg[0] = read_eeprom_uchar(25);  
-   ks+= SAWreg[1] = read_eeprom_uchar(26);  
+   for(i=0; i<sizeof(SAWreg); i++)
+     ks+= SAWreg[i] = read_eeprom_uchar(25+i);  
 
    i=read_eeprom_uchar(28);           // номер первого PWM в PPM режиме
    if(i>0 && i<=8) { pwm1chnl=i; ks+=i; }
    
 // Регистры RSSI (40-41). Задают тип (биби/Вольты) и режим (уровень сигнала или отношение сигнал/шум)
-   ks+= RSSIreg[0] = read_eeprom_uchar(40);  
-   ks+= RSSIreg[1] = read_eeprom_uchar(41);  
-
+   for(i=0; i<sizeof(RSSIreg); i++) {
+     ks+= RSSIreg[i] = read_eeprom_uchar(40+i);  
+   }
    RSSIreg[2] = read_eeprom_uchar(42);  
+
    if(RSSIreg[2] < 1 || RSSIreg[2] > RC_CHANNEL_COUNT) RSSIreg[2]=0;             // 1 - RC_CHANNEL_COUNT, другое - не использовать
    ks+=RSSIreg[2];
 
@@ -152,38 +153,41 @@ void write_eeprom(void)
      ks+=BeaconReg[i];  
    }
    // Регистры поддержки SAW фильтра (25,26) 
-   write_eeprom_uchar(25,SAWreg[0]);     ks+=SAWreg[0];  
-   write_eeprom_uchar(26,SAWreg[1]);     ks+=SAWreg[1];  
-
+   for(i=0; i<sizeof(SAWreg); i++) { 
+     write_eeprom_uchar(25+i,SAWreg[i]);     ks+=SAWreg[i];  
+   }
    write_eeprom_uchar(28,pwm1chnl);      ks+=pwm1chnl;  // номер первого PWM в PPM режиме
 
 // Регистры RSSI (40-41). Задают тип (биби/Вольты) и режим (уровень сигнала или отношение сигнал/шум)
-   write_eeprom_uchar(40,RSSIreg[0]);     ks+=RSSIreg[0];  
-   write_eeprom_uchar(41,RSSIreg[1]);     ks+=RSSIreg[1];  
-   write_eeprom_uchar(42,RSSIreg[2]);     ks+=RSSIreg[2];  
-
+   for(i=0; i<sizeof(RSSIreg); i++) { 
+     write_eeprom_uchar(40+i,RSSIreg[i]);     ks+=RSSIreg[i];  
+   }
+  
    write_eeprom_uint(EEPROM_KS_ADR,ks);        // Write checksum
 } 
+
+char etxt1[] PROGMEM = "FLASH ERROR!!! Can't work!";
+char etxt2[] PROGMEM = "Error read settings!";
+char etxt3[] PROGMEM = "Settings reset to defaults!";
 
 
 void eeprom_check(void)              // читаем и проверяем настройки из EEPROM, а также целостность программы
 {
   if(flash_check()) {
-      if(!satFlag) Serial.println("FLASH ERROR!!! Working unpredictable!");
+      if(!satFlag)  printlnPGM(etxt1);
       Red_LED_Blink(120);  // долго мигаем красным, если КС не сошлась
   }    
   
   if(check_modes(2)) {               //  Джампер на каналах 5-6 - означает сброс настроек к дефолтным
      Red_LED_Blink(4);
      write_eeprom(); 
-     if(!satFlag) Serial.println("Settings reset to defaults!");
+     if(!satFlag)  printlnPGM(etxt3);
      Red_LED_Blink(4);
   } else {
     if(!read_eeprom()) {
-        if(!satFlag) Serial.println("Error read settings!");
+        if(!satFlag)  printlnPGM(etxt2);
         Red_LED_Blink(120);  // мигаем красным, если КС не сошлась
     }
   }
 }  
-
 
