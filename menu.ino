@@ -54,22 +54,6 @@ static char *menuAdr[] = {      // массив адресов строк
    help21
 };  
 
-void showRegs(void)         // показать значения регистров
-{
-  unsigned char i,j=0,k;
-  
-  for(int i=1; i<=REGS_NUM; i++) {
-    if(regs[j] == i) {
-      Serial.print(i);
-      Serial.write('=');
-      Serial.print(read_eeprom_uchar(i));
-      Serial.write('\t');
-      printlnPGM(menuAdr[j]);   // читаем строки из программной памяти
-      j++;
-    }
-  }
-}
-
 
 byte checkMenu(void)   // проверка на вход в меню
 {
@@ -200,6 +184,24 @@ char mtxt1[] PROGMEM = "To Enter MENU Press ENTER";
 char mtxt2[] PROGMEM = "Type Reg and press ENTER, type Value and press ENTER (q=Quit; ss/sl/sa=Stat)";
 char mtxt3[] PROGMEM = "Rg=Val \tComments -----------------------";
 
+void showRegs(void)         // показать значения регистров
+{
+  unsigned char i,j=0,k;
+  
+  printlnPGM(mtxt3);
+  for(int i=1; i<=REGS_NUM; i++) {
+    if(regs[j] == i) {
+      Serial.print(i);
+      Serial.write('=');
+      Serial.print(read_eeprom_uchar(i));
+      Serial.write('\t');
+      printlnPGM(menuAdr[j]);   // читаем строки из программной памяти
+      j++;
+    }
+  }
+}
+
+
 void doMenu()                       // работаем с меню
 {
   char str[12];
@@ -210,7 +212,6 @@ void doMenu()                       // работаем с меню
   if(str[0] == 'q' || str[0] == 'Q') return;     // Q - то quit
   
   while(1) {
-    printlnPGM(mtxt3);
     showRegs();
     printlnPGM(mtxt2);
 
