@@ -10,12 +10,12 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 6, 1 };
+unsigned char version[] = { 6, 2};
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
 // 2 = Rx Open/orange v2 Board
-#define RX_BOARD_TYPE 1
+#define RX_BOARD_TYPE 2
 
 //######### DEBUG MODES ##########
 // 0 = No Debug Output
@@ -114,6 +114,7 @@ unsigned long self_pack_time;    // время последнего целого
 unsigned char beacon_flag = 0;   // признак первого писка
 unsigned char failsafe_mode = 0; //Falsafe modes  0 = Deactive, 1 = Active
 unsigned char search_mode =  1;  // Флаг медленного поиска первого пакета 
+unsigned char beaconFcorr = 199;  // копия Regs4[2], для маяка, что-бы не менялась
 
 volatile unsigned char RF_Mode = 0;  /* для RFMки */
 #define Available 0
