@@ -255,6 +255,7 @@ void loop()
     Red_LED_Blink(1); // Red LED blink
   }
   eeprom_check(); 
+  beaconFcorr=Regs4[2];
   statInit();         // инициализируем статистику
   
   load_failsafe_values();   // Load failsafe values on startup
