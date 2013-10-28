@@ -310,7 +310,7 @@ void beacon_send(void)
   ItStatus2 = _spi_read(0x04);
   _spi_write(0x06, 0x00);    // no wakeup up, lbd,
   _spi_write(0x07, RF22B_PWRSTATE_READY);      // disable lbd, wakeup timer, use internal 32768,xton = 1; in ready mode
-  _spi_write(0x09, Regs4[2]);  // подстройка частоты
+  _spi_write(0x09, beaconFcorr);  // подстройка частоты
   _spi_write(0x0a, 0x05);
   _spi_write(0x0b, 0x12);    // gpio0 TX State
   _spi_write(0x0c, 0x15);    // gpio1 RX State
