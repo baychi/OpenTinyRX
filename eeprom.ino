@@ -3,7 +3,7 @@
 // **      RFM22B/23BP/Si4432 Reciever with Expert protocol **
 // **      This Source code licensed under GPL            **
 // **********************************************************
-// Latest Code Update : 2013-10-22
+// Latest Code Update : 2013-10-29
 // Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
 // Project page       : https://github.com/baychi/OpenTinyRX
 // **********************************************************
@@ -12,8 +12,12 @@
 #define FS_EEPROM_ADR   64     /* address of FS settings   */
 #define STAT_EPROM_ADR  88     /* начальный адрес статистики в EEPROM */
 unsigned int LAST_EEPROM_ADR=1024;   /* последний адрес статистики в EEPROM для ATMEGA328 = 35*26 байт*/
+#if (__AVR_ATmega328P__ == 1)
+  #define FLASH_SIZE 16384         /* размер контроллируемой памяти программ */
+#else
+  #define FLASH_SIZE 32768         /* размер контроллируемой памяти программ */
+#endif
 
-#define FLASH_SIZE 16384         /* размер контроллируемой памяти программ */
 #define FLASH_SIGN_ADR 6         /* адрес сигнатуры прошивки в EEPROM */
 #define FLASH_KS_ADR 8           /* адрес контрольной суммы прошивки в EEPROM */
 #define EEPROM_KS_ADR 10         /* адрес контрольной суммы настроек в EEPROM */
