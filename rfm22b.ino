@@ -344,3 +344,185 @@ void beacon_send(void)
   _spi_write(0x07, RF22B_PWRSTATE_READY);
 }
  
+
+// Процедура автоматической привязки к передатчику
+//
+#if (__AVR_ATmega328P__ == 1) 
+static byte afcCntr;           // для вычисления поправки частоты
+static int afcAvr;      
+
+bool findHop(byte cnl, word maxTime, byte bind=0)  // отлов пакета за заданное время     
+{
+  byte i,crc;
+  
+  wdt_reset();               //  поддержка сторожевого таймера
+  _spi_write(0x1D, 0x40);    //  AFC enable
+  _spi_write(0x79, cnl);
+  to_rx_mode(); 
+  unsigned long t=millis()+maxTime;
+  RF_Mode = Receive;              // Start next packet wait
+
+  while(RF_Mode == Receive) {
+     if(millis() > t) break;  
+  }
+
+  if(RF_Mode == Received) {   // если дождались
+     send_read_address(0x7f); // Send the package read command
+     for(i=0; i<RF_PACK_SIZE; i++) { //read all buffer 
+       RF_Rx_Buffer[i] = read_8bit_data(); 
+     }  
+     rx_reset();
+                                
+     crc=CRC8(RF_Rx_Buffer+2,RF_PACK_SIZE-3); // проверяем принятый пакет 
+     if(crc == 0) {
+       if(bind && bind != RF_Rx_Buffer[0]) return false;  // если надо, сверяем бинд
+       i=_spi_read(0x2B);   // читаем отклонение частоты  
+       if(i>128) afcAvr -= (256-i);
+       else afcAvr += i;
+       afcCntr++;
+       return true;
+     }
+  }
+
+  return false;
+}
+
+#define MAX_BIND_TIME 19999         // максимальное время поиска бинда
+
+void makeBind(void)                         // собственно поиск передатчика
+{
+  byte *buf=new byte[256];
+  byte hops[HOPE_NUM];
+  byte i,j,k,l,n,hCnt;
+  byte bind;
+  unsigned long t;
+  byte ue=check_modes(5)==0;    // флаг, разрешающий UART
+  
+  sei();
+  if(Regs4[2] < 170 || Regs4[2] > 230) Regs4[2]=199;  // на всякий случай проверим поправку
+
+repeatAll:
+  hCnt=bind=0;                 // 0 - нет привязки 
+  afcAvr=afcCntr=0;       // для вычисления откл. частоты
+  if(Regs4[2] < 170 || Regs4[2] > 230) Regs4[2]=199;
+  
+  RF22B_init_parameter();      // подготовим RFMку 
+  to_rx_mode(); 
+  SAW_FILT_OFF                 
+  _spi_write(0x1D, 0x00);      //  AFC disable
+  rx_reset();
+
+  if(ue) Serial.print("\r\nBind find start: ");
+  for(i=0; i<255; i++) buf[i]=0;
+  t=millis()+MAX_BIND_TIME;         // засечем момент начала поиска
+
+//     
+// Постоянно сканируем эфир, на предмет выявления возможных частот 
+
+repeatFind:  
+  wdt_reset();               //  поддержка сторожевого таймера
+  j=k=n=l=0;
+  for(i=0; i<255; i++) {
+      if(buf[i] < 250) {          // для еще не проверенных частот 
+        _spi_write(0x79, i);      // ставим канал
+        delayMicroseconds(649);   // очень жаль, что меньше нельзя
+        j=_spi_read(0x26);        // читаем уровень сигнала
+        if(j>buf[i]) buf[i]=j;    // накапливаем максиммум
+        if(j > l) { l=j; k=i; }   // заодно фиксируем самый большой пик
+      }
+  }
+  Green_LED_OFF;
+
+  if(hCnt==0) {
+     if(ue) { Serial.print(" Maxlevel["); Serial.print(k); Serial.print("]="); Serial.println(l); }
+     if(l < 150) goto repeatAll;
+  }
+  if(l < 150) goto repeatFind;
+  
+ //
+ // Елси есть кандидаты на отлов
+
+  if(findHop(k,259,bind)) {                // проверяем канал 
+    bind=RF_Rx_Buffer[0];                 // фиксируем бинд 
+    if(ue) { Serial.print(k); Serial.write(' '); }
+    hops[hCnt++]=k;  // берем до 8-ми каналов, лежащих выше порога
+    Green_LED_ON;                         // мигаем диодом в честь найденного пакета   
+  } 
+  buf[k]=255;                              // признак того, что данная частота уже проверенна
+  
+  if(hCnt == 0) goto repeatAll;               // пока никого не нашли
+  if(millis() > t) {
+    if(hCnt != 1 && hCnt != 2 && hCnt != 4 && hCnt != HOPE_NUM) goto repeatAll;   // если время поиска истекло и не найдено даже вырожденных случаев
+  } else  {  
+    if(hCnt < HOPE_NUM) goto repeatFind;         // не набрали минимального числа кандидатов
+  }
+  
+  //
+  // Ищем последовательность прыжков
+repTimes:
+  if(ue) Serial.print("\r\nTimes: ");   
+  n=0;
+  for(i=1; i<hCnt; i++) {                     
+    t=millis()+MAX_BIND_TIME;
+    while(!findHop(hops[0],259,bind)) {        // ждем первый канал
+      if(millis() > t) goto repeatAll;         // но не бесконечно
+    }
+    t=millis();
+    if(findHop(hops[i],599,bind)) {            // проверяем, сколко времени надо ждать относительно первого
+       t=millis()-t; 
+       j=(t-8)/32; 
+       if(j >= HOPE_NUM) j-=HOPE_NUM;
+       for(k=0; k<i; k++) {                    // повторяющихся времен быть не должно
+         if(buf[k] == j) goto repTimes;
+       }
+       buf[i] = j; 
+       if(ue) { Serial.print(j); Serial.write(' '); }
+       n++;
+    }
+  }
+  if(ue) Serial.println();
+  hop_list[0]=hops[0];                        // первый канал всегда известен
+
+  if(hCnt == 1) {                             // банальный случай всех одинаковых каналов
+    for(i=1; i<HOPE_NUM; i++)  hop_list[i]=hops[0];      
+  } else if(hCnt == 2) {                      // банальный случай чередования 2-х каналов
+    for(i=0; i<HOPE_NUM; i+=2)  { hop_list[i]=hops[0]; hop_list[i+1]=hops[1];   }
+  } else if(hCnt == 4) {
+     for(i=1; i<4; i++) {                     // расставляем каналы по местам
+       j=buf[i]+1;
+       if(j < 4)
+         hop_list[j+4]=hop_list[j]=hops[i];
+     }
+  } else {                                    // классический вариант из 8-ми независимых каналов
+     if(n < HOPE_NUM-1) goto repeatAll;        
+     for(i=1; i<HOPE_NUM; i++) {              // расставляем каналы по местам
+       j=buf[i]+1;
+       hop_list[j]=hops[i];
+     }
+  }  
+
+  // Завершаем биндинг 
+
+  afcAvr/=afcCntr;
+  Regs4[1]=bind;                              // формируем бинд
+  if(abs(afcAvr) < 15)  Regs4[2] -= afcAvr;   // и поправка кварца
+  if(ue) {
+    Serial.print("Bind=");   Serial.print(bind);
+    Serial.print(" Fcorr=");   Serial.print(Regs4[2]);
+    Serial.print(" Sequence: ");
+    for(i=0; i<HOPE_NUM; i++) { Serial.print(hop_list[i]); Serial.write(' '); }
+    Serial.println(" End");
+  }
+
+//  goto repeatAll;              // !!!!!!!!!!!!!!!!!!!
+
+  delete buf;
+  write_eeprom();              // записываем новую привязку в EEPROM 
+  Red_LED_ON;
+//  if(!ue) 
+}
+#else
+void makeBind(void)                         // собственно поиск передатчика
+{
+}
+#endif
