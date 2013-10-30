@@ -88,8 +88,6 @@ void setup()
         pinMode(Servo9_OUT, OUTPUT); //Servo9
         pinMode(Servo10_OUT, OUTPUT); //Servo10
         
-        Serial.begin(SERIAL_BAUD_RATE); //Serial Transmission 
-        
        INIT_SERVO_DRIVER();
        
        attachInterrupt(IRQ_interrupt,RFM22B_Int,FALLING);
@@ -254,6 +252,9 @@ void loop()
     printHeader();
     Red_LED_Blink(1); // Red LED blink
   }
+  if(check_modes(5)) makeBind();    // данный джампер, означает режим поиска и привязки к передатчику
+  Serial.begin(SERIAL_BAUD_RATE); //Serial Transmission 
+        
   eeprom_check(); 
   beaconFcorr=Regs4[2];
   statInit();         // инициализируем статистику
@@ -263,7 +264,6 @@ void loop()
 
   PWM_enable=0;
   wdt_enable(WDTO_1S);     // запускаем сторожевой таймер 
-//  wdt_enable(WDTO_250MS);     // запускаем сторожевой таймер 
 
   if(!satFlag) {           // 
     Serial.print("S/N=");  Serial.println(Regs4[0]);
