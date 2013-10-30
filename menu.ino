@@ -23,7 +23,7 @@ void printlnPGM(char *adr, char ln)   // печать строки из памя
   if(ln) Serial.println();  
 }
 
-static unsigned char regs[] = {1, 2, 3, 4, 11,12,13,14,15,16,17,18,19,20,24,25,26,28,40,41,42 } ;
+static unsigned char regs[] = {1, 2, 3, 4, 5, 11,12,13,14,15,16,17,18,19,20,24,25,26,28,40,41,42 } ;
 
 // Держим текст в программной памяти
 //
@@ -31,6 +31,7 @@ static char help1[] PROGMEM =  "Bind N";
 static char help2[] PROGMEM =  "Freq Corr";
 static char help3[] PROGMEM =  "Servo 150% strech num (1-12)";
 static char help4[] PROGMEM =  "Statistics enable";
+static char help22[] PROGMEM = "11 bit/11 ch enable";
 static char help5[] PROGMEM =  "Hope F1";
 static char help6[] PROGMEM =  "Hope F2";
 static char help7[] PROGMEM =  "Hope F3";
@@ -49,7 +50,7 @@ static char help19[] PROGMEM =  "RSSI type: sound(0)/level(1-99=average)";
 static char help20[] PROGMEM =  "RSSI mode: level(0)/SN ratio(1)";
 static char help21[] PROGMEM =  "RSSI over PWM(chan:1-12) 0-not use";
 static char *menuAdr[] = {      // массив адресов строк 
-   help1, help2, help3, help4, help5, help6, help7, help8, help9, help10, 
+   help1, help2, help3, help4, help22, help5, help6, help7, help8, help9, help10, 
    help11, help12, help13, help14, help15, help16, help17, help18, help19, help20, 
    help21
 };  
@@ -183,6 +184,7 @@ void showNoise(char str[])             // отображаем уровень ш
 char mtxt1[] PROGMEM = "To Enter MENU Press ENTER";
 char mtxt2[] PROGMEM = "Type Reg and press ENTER, type Value and press ENTER (q=Quit; ss/sl/sa=Stat)";
 char mtxt3[] PROGMEM = "Rg=Val \tComments -----------------------";
+char mtxt4[] PROGMEM = "Execute rebind? Are you sure(y/n)?";
 
 void showRegs(void)         // показать значения регистров
 {
@@ -228,6 +230,17 @@ rep:
       goto rep;
     }
     
+#if (__AVR_ATmega328P__ == 1) 
+    if(str[0] == 'r' && str[1] == 'e' && str[2] == 'b' && str[3] == 'i' && str[4] == 'n' && str[5] == 'd') { // rebinding
+      printlnPGM(mtxt4);
+      getStr(str);
+      if(str[0] == 'y' || str[0] == 'Y') {
+        makeBind();
+        return;
+      }    
+    }      
+#endif
+
     if(str[0] == 'q' || str[0] == 'Q') return;     // Q - то quit
     reg=atoi(str);
     if(reg<0 || reg>REGS_NUM) continue; 
