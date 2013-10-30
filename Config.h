@@ -7,10 +7,13 @@
 // Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
 // Project page       : https://github.com/baychi/OpenTinyRX
 // **********************************************************
+#if (__AVR_ATmega328P__ != 1 && __AVR_ATmega168__ != 1) || (F_CPU != 16000000)
+#error Wrong board selected, select Arduino Pro/Pro Mini 5V/16MHz w/ ATMega328 or ATMega168
+#endif
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 6, 2};
+unsigned char version[] = { 7, 2 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -48,7 +51,7 @@ unsigned char version[] = { 6, 2};
 static unsigned char hop_list[HOPE_NUM] = {77,147,89,167,109,189,127,209};   // по умолчанию - мои частоты
 
 // Четыре первых регистра настроек (S/N, номер Bind, поправка частоты, номер сервы расширения, разрешение статистики 
-static unsigned char Regs4[5] = {99 ,72, 204, 0, 1 };  
+static unsigned char Regs4[6] = {99 ,72, 204, 0, 1, 0 };  
 
 // Регистры поддержки SAW фильтра (25,26) задают границы частот, внутри которых фильтр включен (GPIO2=1)
 static unsigned char  SAWreg[2] =   {75, 210 };  
