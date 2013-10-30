@@ -37,7 +37,8 @@ void RFM22B_Int()
 void Red_LED_Blink(unsigned short blink_count)
 {
   unsigned char i;
-  for (i=0;i<blink_count;i++)     {
+  for (i=0; i<blink_count; i++)     {
+     wdt_reset();               //  поддержка сторожевого таймера
      delay(125);
      if(blink_count > 10 && checkMenu()) {            // в долгих ситуациях даем возможность входа в меню
        doMenu();
@@ -50,19 +51,20 @@ void Red_LED_Blink(unsigned short blink_count)
 }
 
 
-static unsigned pairs[10] = { // пары для 5-х возможных перемычек
+static unsigned pairs[12] = { // пары для 5-х возможных перемычек
     Servo1_OUT,Servo2_OUT,
     Servo3_OUT,Servo4_OUT,
     Servo5_OUT,Servo6_OUT, 
     Servo7_OUT,Servo8_OUT, 
-    Servo9_OUT,Servo10_OUT
+    Servo9_OUT,Servo10_OUT,
+    0,1                       // а это UART  
 }; 
 
 // Проверка перемычки на паре каналов (1-2...9-10)
 //
-unsigned char check_modes(byte n)   // 0 - режим PWM/PPM; 1-анализатор спектра?; 2 - сброс регистров в дефолт, 4 -сателлит.
+unsigned char check_modes(byte n)   // 0 - режим PWM/PPM; 1-анализатор спектра?; 2 - сброс регистров в дефолт, 4 -сателлит. 5-rebind
 {
-  if(n>4) return 0;
+  if(n>5) return 0;
   else n+=n;
 
   pinMode(pairs[n], INPUT);     // input
@@ -113,17 +115,18 @@ void Hopping(void)
 void Buf_To_Servo(unsigned char buf[])
 {
      byte i,lowBit=buf[RC_CHANNEL_COUNT+3];
+     byte bit11=buf[RC_CHANNEL_COUNT+1];   // 12-й канал, может быть использовани как хранилище 11-го бита
      byte ServoStrechNum=Regs4[3]-1;       // Номер сервы с расшитерннгом диапазоном
      int temp_int;
 
      for(i = 0; i<RC_CHANNEL_COUNT; i++) { // Write into the Servo Buffer
         temp_int = 4 * buf[i+2];
         if(i<8) {                   // 2-й байт пакета содержит старшие биты 8-ми первых каналов 
-           if(i<7 && (lowBit&(2<<i))) temp_int += 2;  // делаем 10 биь для 7 первых каналов из упр. байта
+           if(i<7 && (lowBit&(2<<i))) temp_int += 2;   // делаем 10 биь для 7 первых каналов из упр. байта
+           if(Regs4[5] && (bit11&(1<<i))) temp_int++;  // а здесь добавляем еще и 11-й бит, если разрешено 
            if(buf[1]&(1<<i)) temp_int +=1024; 
          } else temp_int +=temp_int;
          if(i == ServoStrechNum) {       // реализуем расширение диапазона сервы на 150%
-//           temp_int=(float)((temp_int-1024))*1.41f + 1024;
            temp_int-=1024;
            temp_int+=temp_int>>1;       // умножаем на 1.5
            if(temp_int > 1200) temp_int=1200;
@@ -132,6 +135,7 @@ void Buf_To_Servo(unsigned char buf[])
          }
          Servo_Buffer[i] = temp_int+1980; // кодируем PWM в мкс*2
       }
+      if(Regs4[5]) Servo_Buffer[RC_CHANNEL_COUNT-1]=1980+1024; // когда 12-й канал не используется
 }  
 
 void Direct_Servo_Drive(void)         // перекидываем ширины вых. импульсов из временного буфера в рабочий
