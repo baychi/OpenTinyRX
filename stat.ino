@@ -51,8 +51,8 @@ void statLoop(void)                                 // фоновой цикл �
 {
   unsigned char *ptr=(unsigned char *)&saveStat;
   
-  if(Regs4[4] == 0) return;                             // if disabled
-  
+  if(Regs4[4] == 0 || sbusDis()) return;                             // if disabled
+    
   if(statByte < sizeof(saveStat)) {                 
      EEPROM.write(statAdr+statByte,ptr[statByte]);  // пишем байт
      if(++statByte == sizeof(saveStat)) {           // если закончили, сформируем указатель на след. запись
