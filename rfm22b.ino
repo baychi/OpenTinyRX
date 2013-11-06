@@ -267,7 +267,14 @@ void to_sleep_mode(void)
 } 
 //--------------------------------------------------------------   
   
+void sleepMks(word mks)   // аналог delayMicroseconds, но с отдачей квантов SBUS
+{
+  unsigned long t=micros()+mks;
   
+  while(micros() < t)
+    sendSbus();  
+}  
+
 // Маяк из проекта KHA
 
 void beacon_tone(int16_t hz, int16_t len, byte pow) //duration is now in half seconds.
@@ -284,7 +291,7 @@ void beacon_tone(int16_t hz, int16_t len, byte pow) //duration is now in half se
   Green_LED_ON
 #endif  
 
-  delay(10);
+  delay(1);
 
 #if(RX_BOARD_TYPE == 1)
   _spi_write(0x0e, 0x00);     // гасим индикатор
@@ -294,13 +301,13 @@ void beacon_tone(int16_t hz, int16_t len, byte pow) //duration is now in half se
 
   wdt_reset();               //  поддержка сторожевого таймера
 
-  int16_t cycles = (len * 250000 / d);
+  word cycles = (len * 250000 / d);
 
-  for (int16_t i = 0; i < cycles; i++) {
+  for(word i = 0; i < cycles; i++) {
     SDI_on;
-    delayMicroseconds(d);
+    sleepMks(d);
     SDI_off;
-    delayMicroseconds(d);
+    sleepMks(d);
   }
 }
 
@@ -338,8 +345,8 @@ void beacon_send(void)
   _spi_write(0x07, RF22B_PWRSTATE_TX);    // to tx mode
   beacon_tone(440, 1 ,BeaconReg[1]);
   beacon_tone(349, 1, BeaconReg[2]);
-  beacon_tone(175, 1, BeaconReg[3]);
-  beacon_tone(261, 1, BeaconReg[4]);
+  beacon_tone(261, 1, BeaconReg[3]);
+  beacon_tone(175, 1, BeaconReg[4]);
 
   _spi_write(0x07, RF22B_PWRSTATE_READY);
 }
@@ -399,12 +406,11 @@ void makeBind(void)                         // собственно поиск �
   byte ue=check_modes(5)==0;    // флаг, разрешающий UART
   
   sei();
-  if(Regs4[2] < 170 || Regs4[2] > 230) Regs4[2]=199;  // на всякий случай проверим поправку
 
 repeatAll:
   hCnt=bind=0;                 // 0 - нет привязки 
   afcAvr=afcCntr=0;       // для вычисления откл. частоты
-  if(Regs4[2] < 170 || Regs4[2] > 230) Regs4[2]=199;
+  if(Regs4[2] < 165 || Regs4[2] > 235) Regs4[2]=199;     // на всякий случай проверим поправку
   
   RF22B_init_parameter();      // подготовим RFMку 
   to_rx_mode(); 
