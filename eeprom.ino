@@ -63,9 +63,10 @@ byte flash_check(void)
    if(sign != i) {                        // при несовпадении, пропишем новые значения
      write_eeprom_uint(FLASH_SIGN_ADR,sign); 
      write_eeprom_uint(FLASH_KS_ADR,ks);
+     return 1;                            // признак 1-го запуска 
    } else {                               // в противном случае проверяем КС
      i=read_eeprom_uint(FLASH_KS_ADR);
-     if(i != ks) return 1;                // признак разрушенной прошивки
+     if(i != ks) return 255;                // признак разрушенной прошивки
    }
    
    return 0;                               // все в порядке
@@ -177,9 +178,11 @@ char etxt3[] PROGMEM = "Settings reset to defaults!";
 
 void eeprom_check(void)              // читаем и проверяем настройки из EEPROM, а также целостность программы
 {
-  if(flash_check()) {
+  byte b=flash_check();
+  unsigned long t;
+  if(b == 255) {
       if(!satFlag)  printlnPGM(etxt1);
-      Red_LED_Blink(120);  // долго мигаем красным, если КС не сошлась
+      Red_LED_Blink(29999);          // очень долго мигаем красным, если КС не сошлась
   }    
   
   if(check_modes(2)) {               //  Джампер на каналах 5-6 - означает сброс настроек к дефолтным
@@ -188,9 +191,30 @@ void eeprom_check(void)              // читаем и проверяем на�
      if(!satFlag)  printlnPGM(etxt3);
      Red_LED_Blink(4);
   } else {
-    if(!read_eeprom()) {
-        if(!satFlag)  printlnPGM(etxt2);
-        Red_LED_Blink(120);  // мигаем красным, если КС не сошлась
+     if(!read_eeprom()) {
+       if(!satFlag)  printlnPGM(etxt2);
+
+       if(b == 1) {                  // при первом запуске программы, это ничего страшного
+          t=millis()+MENU_WAIT_TIME;
+          while(millis() < t) {
+            Red_LED_Blink(1);        // мигаем красным, если КС не сошлась
+            if(checkMenu()) {       // реализуем возможность входа в меню для ручной коррекции настроек
+              doMenu(); 
+              return;
+            }
+          }
+          // сбрасываем настройки в значения по умолчанию
+          Regs4[1]=72; Regs4[2]=199; Regs4[4]=1;  Regs4[3]=Regs4[5]=Regs4[6]=0;
+          SAWreg[0]=75; SAWreg[1]=210;
+          BeaconReg[0]=100;  BeaconReg[1]=4;  BeaconReg[2]=2;  BeaconReg[3]=1;  BeaconReg[4]=0;  BeaconReg[5]=30;
+          RSSIreg[0]=7; RSSIreg[1]=1; RSSIreg[2]=0;
+          hop_list[0]=77; hop_list[1]=147; hop_list[2]=89; hop_list[3]=167; 
+          hop_list[4]=109; hop_list[5]=189; hop_list[6]=127; hop_list[7]=209;
+
+          write_eeprom(); 
+          return;
+       } 
+       Red_LED_Blink(120);  // мигаем красным, если КС не сошлась
     }
   }
 }  
