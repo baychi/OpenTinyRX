@@ -3,6 +3,7 @@ Megaloader328.hex - compact bootloader for atmega368. Use fuses: Low=DE, High=DC
 Megaloader site - http://www.microsyl.com/index.php/2010/03/30/megaload/
 
 oerxXXtiny168.hex - programm for original Expert Tiny/2G LRS  reciever module
+oerxXXtiny328.hex - programm for original Expert Tiny/2G LRS reciever module with atmegs328 (on 168 - not work!)
 oerxXXorange328.hex - programm for Open/Orange LRS reciever module 
 
 Recomendations:
