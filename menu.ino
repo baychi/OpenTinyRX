@@ -23,7 +23,7 @@ void printlnPGM(char *adr, char ln)   // печать строки из памя
   if(ln) Serial.println();  
 }
 
-static unsigned char regs[] = {1, 2, 3, 4, 5, 11,12,13,14,15,16,17,18,19,20,24,25,26,28,40,41,42 } ;
+static unsigned char regs[] = {1, 2, 3, 4, 5, 6, 11,12,13,14,15,16,17,18,19,20,24,25,26,28,40,41,42 } ;
 
 // Держим текст в программной памяти
 //
@@ -31,7 +31,8 @@ static char help1[] PROGMEM =  "Bind N";
 static char help2[] PROGMEM =  "Freq Corr";
 static char help3[] PROGMEM =  "Servo 150% strech num (1-12)";
 static char help4[] PROGMEM =  "Statistics enable";
-static char help22[] PROGMEM = "11 bit/11 ch enable";
+static char help22[] PROGMEM = "11 bit/10 ch mode";
+static char help23[] PROGMEM = "Discrete outputs mask";
 static char help5[] PROGMEM =  "Hope F1";
 static char help6[] PROGMEM =  "Hope F2";
 static char help7[] PROGMEM =  "Hope F3";
@@ -50,7 +51,7 @@ static char help19[] PROGMEM =  "RSSI type: sound(0)/level(1-99=average)";
 static char help20[] PROGMEM =  "RSSI mode: level(0)/SN ratio(1)";
 static char help21[] PROGMEM =  "RSSI over PWM(chan:1-12) 0-not use";
 static char *menuAdr[] = {      // массив адресов строк 
-   help1, help2, help3, help4, help22, help5, help6, help7, help8, help9, help10, 
+   help1, help2, help3, help4, help22, help23, help5, help6, help7, help8, help9, help10, 
    help11, help12, help13, help14, help15, help16, help17, help18, help19, help20, 
    help21
 };  
@@ -259,7 +260,7 @@ rep:
   }    
 }  
 
-char htxt1[] PROGMEM = "\r\nBaychi soft 2013";
+char htxt1[] PROGMEM = "\n\rBaychi soft 2013";
 char htxt3[] PROGMEM = "RX Open Expert V2 F";
 void printHeader(void)
 {
@@ -267,3 +268,31 @@ void printHeader(void)
   printlnPGM(htxt3,0); Serial.println(version[0]);
 }  
 
+static byte tempAfc=199;     // временная поправка частоты 
+
+bool doFrecHandCorr()
+{
+   int i;
+   
+   if(Regs4[2] == 0 && Serial.available() > 0) {   // ручная подстройка частоты при REG2=0
+      i=Serial.read();
+      if(i == 0xd) {            //
+         beaconFcorr=Regs4[2]=tempAfc;
+         write_eeprom();
+         Serial.println("Fixed!");
+         RF22B_init_parameter(); 
+         return true; 			 
+      }
+      
+      if(i == '>' || i == '.' || i==238) tempAfc++;
+      else if(i == '<' || i == ',' || i==161) tempAfc--;
+      else return false;
+           
+      if(tempAfc > 255) tempAfc=1;
+      if(tempAfc < 1) tempAfc=255;
+       _spi_write(0x09, tempAfc);  // подстройка частоты
+       Serial.println(tempAfc);
+       beaconFcorr=tempAfc;        // для подстройки по звуку маяка 
+   }
+   return false;
+}
