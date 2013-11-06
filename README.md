@@ -26,3 +26,9 @@ RX Firmware for openLRS compatible with Expert 2G/Tiny LRS
 - added noise level output without recieving
 - minor constant corrections
 
+6 nov 2013 (version F8)
+- Added SBUS out mode
+- Added autobinding to transmitter
+- Added discrete outs
+- Added 11 bit/10 ch mode
+- Added autoreset to defaults in 1-st start with error settings
