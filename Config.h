@@ -7,13 +7,14 @@
 // Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
 // Project page       : https://github.com/baychi/OpenTinyRX
 // **********************************************************
-#if (__AVR_ATmega328P__ != 1 && __AVR_ATmega168__ != 1) || (F_CPU != 16000000)
-#error Wrong board selected, select Arduino Pro/Pro Mini 5V/16MHz w/ ATMega328 or ATMega168
+#if (__AVR_ATmega328P__ != 1)  || (F_CPU != 16000000)
+#error Wrong board selected, select Arduino Pro/Pro Mini 5V/16MHz w/ ATMega328
 #endif
+#include <avr/wdt.h>
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 7, 2 };
+unsigned char version[] = { 8, 1 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -51,7 +52,7 @@ unsigned char version[] = { 7, 2 };
 static unsigned char hop_list[HOPE_NUM] = {77,147,89,167,109,189,127,209};   // по умолчанию - мои частоты
 
 // Четыре первых регистра настроек (S/N, номер Bind, поправка частоты, номер сервы расширения, разрешение статистики 
-static unsigned char Regs4[6] = {99 ,72, 204, 0, 1, 0 };  
+static unsigned char Regs4[7] = {99 ,72, 204, 0, 1, 0, 0 };  
 
 // Регистры поддержки SAW фильтра (25,26) задают границы частот, внутри которых фильтр включен (GPIO2=1)
 static unsigned char  SAWreg[2] =   {75, 210 };  
@@ -92,20 +93,30 @@ static unsigned char menuFlag=1;              // Флаг, разрешающи�
 #define AUX6 11
 
 #define RF_PACK_SIZE 16                 /* размер данных в пакете */
-#define RC_CHANNEL_COUNT 12             /* количество каналов управления и импульсов на PPM OUT */
-#define PWM_OUT_NUM 10                   /* количество PWM выходов */
+#define RC_CHANNEL_COUNT 12             /* общее количество каналов управления */
+#define PWM_OUT_NUM 10                  /* количество PWM выходов */
+#define MAX_PPM_OUT 10                  /* максимальное количество PPM импульсов (больше 10 не ставить) */
+#define MAX_SBUS_OUT 4                  /* максимальное количество PWM импульсов в режмме SBUS */
+unsigned int ppmPwmCycleTime=40000;     // период цикла выдачи PPM/PWM импульсов в 0.5 мкс интервалах
 
 unsigned char RF_Rx_Buffer[RF_PACK_SIZE];
 unsigned int Servo_Buffer[RC_CHANNEL_COUNT] = {3000,3000,3000,3000,3000,3000,3000,3000,3000,3000,3000,3000};	//servo position values from RF
 unsigned int Servo_Position[RC_CHANNEL_COUNT] = {3000,3000,3000,3000,3000,3000,3000,3000,3000,3000,3000,3000};	//real servo position values
 static unsigned char Servo_Number = 0;
 unsigned int total_ppm_time=0;
-unsigned int rl_counter=0;
+unsigned int rl_counter=0;             // счетчик непринятых пакетов
 unsigned short Rx_RSSI, N_RSSI, Pause_RSSI, N_pause;       // переменные для вычисления RSSI
 unsigned int lastRSSI=0;                                 
 
-static unsigned char receiver_mode = 0, reciever_outs=PWM_OUT_NUM;  // режим работы (PWM/PPM) и количкство вых каналов 10/12
-static unsigned char hopping_channel = 0;
+#define PPM_MODE_JUMPER  0        // проверка на режим PPM
+#define SA_MODE_JUMPER   1        // проверка на режим анализатора (не реализванно)
+#define RESET_JUMPER     2        // проверка на сброс настроек 
+#define SAT_MODE_JUMPER  4        // режим сателлита
+#define REBIND_JUMPER    5        // режим автопривязки к передатчику
+#define SBUS_MODE_JUMPER 6        // режим SBUS  
+
+unsigned char receiver_mode = 0, reciever_outs=PWM_OUT_NUM;  // режим работы (PWM/PPM) и количкство вых каналов 10/12
+unsigned char hopping_channel = 0;
 
 unsigned char PWM_enable=0;      // запрет на генерацию импульсов до приема первого целого пакета 
 
@@ -117,7 +128,8 @@ unsigned long self_pack_time;    // время последнего целого
 unsigned char beacon_flag = 0;   // признак первого писка
 unsigned char failsafe_mode = 0; //Falsafe modes  0 = Deactive, 1 = Active
 unsigned char search_mode =  1;  // Флаг медленного поиска первого пакета 
-unsigned char beaconFcorr = 199;  // копия Regs4[2], для маяка, что-бы не менялась
+unsigned char beaconFcorr = 199; // копия Regs4[2], для маяка, что-бы не менялась
+unsigned char lastPackBad=0;     // флаг битого или непринятого пакета для SBUS
 
 volatile unsigned char RF_Mode = 0;  /* для RFMки */
 #define Available 0
@@ -191,8 +203,6 @@ unsigned long lastSatTime=0;            // время приема послед�
     #define  SDO_0 (PINB & 0x10) == 0x00 //B4
     
 // SAW filtre support
-//    #define SAW_FILT_ON _spi_write(0x0e, 0x04);    // GPIO2=1   
-//    #define SAW_FILT_OFF  _spi_write(0x0e, 0x00);    // GPIO2=0
     #define SAW_FILT_ON  PORTC |= _BV(7);   
     #define SAW_FILT_OFF PORTC &= ~_BV(7);
 
@@ -205,11 +215,7 @@ unsigned long lastSatTime=0;            // время приема послед�
     
     #define Green_LED_ON  PORTC = PORTC;  // фиктивно
     #define Green_LED_OFF PORTC = PORTC;    
-//    #define Green_LED_ON  _spi_write(0x0e, 0x04);   // Оригинальный Tiny
-//    #define Green_LED_OFF _spi_write(0x0e, 0x00);      
         
-    #define Servo_Ports_LOW PORTB &= 0xF8; PORTC &= 0xC1; PORTD &= 0x0F; // pulling down the servo outputs
-    
     #define RSSI_MODE 1 //0=disable  1=enable 
     #define RSSI_OUT 3 // D3
     
@@ -224,22 +230,28 @@ unsigned long lastSatTime=0;            // время приема послед�
     #define Servo9_OUT A4 //Servo9 
     #define Servo10_OUT A3 //Servo10 // 2G only
     #define Servo11_OUT A2 //Servo11 // 2G only  
-    #define Servo12_OUT A1 //Servo9  // 2G only
-    
-    #define Servo1_OUT_HIGH PORTB |= _BV(2) //Servo1
-    #define Servo2_OUT_HIGH PORTB |= _BV(1) //Servo2
-    #define Servo3_OUT_HIGH PORTB |= _BV(0) //Servo3
-    #define Servo4_OUT_HIGH PORTD |= _BV(7) //Servo4
-    #define Servo5_OUT_HIGH PORTD |= _BV(6) //Servo5
-    #define Servo6_OUT_HIGH PORTD |= _BV(5) //Servo6
-    #define Servo7_OUT_HIGH PORTD |= _BV(4) //Servo7
-    #define Servo8_OUT_HIGH PORTC |= _BV(5) //Servo8
-    #define Servo9_OUT_HIGH PORTC |= _BV(4) //Servo9
-    #define Servo10_OUT_HIGH PORTC |= _BV(3) //Servo10
-    #define Servo11_OUT_HIGH PORTC |= _BV(2) //Servo11
-    #define Servo12_OUT_HIGH PORTC |= _BV(1) //Servo12
-    
+    #define Servo12_OUT A1 //Servo12 // 2G only
+
     #define Serial_PPM_OUT_HIGH PORTB |= _BV(0) //Serial PPM out on Servo 3
+    #define Serial_PPM_OUT_LOW PORTB &= ~_BV(0) //Serial PPM out on Servo 3
+
+    #define SBUS_OUT_HIGH PORTB &= ~_BV(2) // SBUS out
+    #define SBUS_OUT_LOW PORTB  |= _BV(2)  // SBUS out
+
+    #define SBUS_OUT_BIT _BV(2)            // SBUS out bit
+    #define SBUS_OUT_PORT 0                // SBUS out port
+
+    unsigned char offOutsMask[3] = { 0xF8, 0xC1, 0x0F };      // маски портов, при сбросе всех импульсов в 0
+    volatile uint8_t *portAddr[] = {                          // адреса портов, поканально  (до 12-ти)
+      &PORTB, &PORTB, &PORTB, &PORTD, &PORTD, &PORTD, &PORTD, &PORTC, &PORTC, &PORTC, &PORTC, &PORTC
+    };
+      
+    unsigned char portMask[] = {                                       // маски портов поканально
+       _BV(2), _BV(1), _BV(0), _BV(7), _BV(6), _BV(5), _BV(4), _BV(5), _BV(4), _BV(3), _BV(2), _BV(1)
+    };
+    unsigned char diskrMask[8] = {                                     // маски  дискр. выходов
+       _BV(2), _BV(1), _BV(0), _BV(7), _BV(6), _BV(5), _BV(4), _BV(5)
+    };
 #endif
 
 
@@ -281,8 +293,6 @@ unsigned long lastSatTime=0;            // время приема послед�
       #define Green_LED_ON  PORTB |= _BV(5);
       #define Green_LED_OFF  PORTB &= ~_BV(5);
       
-      #define Servo_Ports_LOW PORTB &= 0xE0; PORTC &= 0xCF; PORTD &= 0x1F; // pulling down the servo outputs
-      
       #define Servo1_OUT 5 //Servo1
       #define Servo2_OUT 6 //Servo2
       #define Servo3_OUT 7 //Servo3
@@ -297,19 +307,28 @@ unsigned long lastSatTime=0;            // время приема послед�
       #define RSSI_MODE 0 // 0=disable  1=enable 
       #define RSSI_OUT 3  // PORTD.3      
       
-      #define Servo1_OUT_HIGH PORTD |= _BV(5) //Servo1
-      #define Servo2_OUT_HIGH PORTD |= _BV(6) //Servo2
-      #define Servo3_OUT_HIGH PORTD |= _BV(7) //Servo3
-      #define Servo4_OUT_HIGH PORTB |= _BV(0) //Servo4
-      #define Servo5_OUT_HIGH PORTB |= _BV(1) //Servo5
-      #define Servo6_OUT_HIGH PORTB |= _BV(2) //Servo6
-      #define Servo7_OUT_HIGH PORTB |= _BV(3) //Servo7
-      #define Servo8_OUT_HIGH PORTB |= _BV(4) //Servo8
-      #define Servo9_OUT_HIGH PORTC |= _BV(4) //Servo9
-      #define Servo10_OUT_HIGH PORTC |= _BV(5) // Servo10
-    
-     #define Serial_PPM_OUT_HIGH PORTD |= _BV(7) //Serial PPM out on Servo 3
-//      #define Serial_PPM_OUT_HIGH PORTB = _BV(4) //Serial PPM out on Servo 8
+      #define Serial_PPM_OUT_HIGH PORTD |= _BV(7) //Serial PPM out on Servo 3
+      #define Serial_PPM_OUT_LOW PORTD &= ~_BV(7) //Serial PPM out on Servo 3
+
+      #define SBUS_OUT_HIGH PORTD &= ~_BV(5) // SBUS out
+      #define SBUS_OUT_LOW PORTD  |= _BV(5)  // SBUS out
+
+      #define SBUS_OUT_BIT _BV(5)            // SBUS out bit
+      #define SBUS_OUT_PORT 2                // SBUS out port
+
+      unsigned char offOutsMask[3] = { 0xE0, 0xCF, 0x1F };       // маски портов, при сбросе всех импульсов в 0
+
+      volatile unsigned char *portAddr[PWM_OUT_NUM] = {                // адреса портов, поканально  
+        &PORTD, &PORTD, &PORTD, &PORTB, &PORTB, &PORTB, &PORTB, &PORTB, &PORTC, &PORTC 
+      };
+      
+      unsigned char portMask[PWM_OUT_NUM] = {                      // маски портов поканально
+         _BV(5), _BV(6), _BV(7), _BV(0), _BV(1), _BV(2), _BV(3), _BV(4), _BV(4), _BV(5)
+      };
+      unsigned char diskrMask[8] = {                                // маски выходов
+         _BV(5), _BV(6), _BV(7), _BV(0), _BV(1), _BV(2), _BV(3), _BV(4)
+      };
+   
 #endif
 
 void printlnPGM(char *adr, char ln=1);   // печать строки из памяти программы ln - перевод строки
