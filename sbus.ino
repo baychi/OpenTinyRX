@@ -130,11 +130,11 @@ void sendSbus()
 
 bool sbusDis()                    // проверка на запрет по времени для тормозный функций типа статистики
 {
-  if(receiver_mode!=2) return true; // не sbus
+  if(receiver_mode!=2) return false; // не sbus
 
-  if(micros()-tSbus < MIN_INTERVAL_TIME) return true;  // недавно отправлялись
+  if(micros()-tSbus < MIN_INTERVAL_TIME) return false;  // недавно отправлялись
   
-  return false;
+  return true;
 }  
 
 #endif
