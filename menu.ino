@@ -233,7 +233,7 @@ rep:
     
 #if (__AVR_ATmega328P__ == 1) 
     if(str[0] == 'r' && str[1] == 'e' && str[2] == 'b' && str[3] == 'i' && str[4] == 'n' && str[5] == 'd') { // rebinding
-      printlnPGM(mtxt4);
+      printlnPGM(mtxt4,0);
       getStr(str);
       if(str[0] == 'y' || str[0] == 'Y') {
         makeBind();
