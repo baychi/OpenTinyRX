@@ -173,12 +173,18 @@ void OutRSSI(byte val, byte weight)
 
 void dOutsInit()               // инициализация дискретных выходов
 {
+  word pi;
+  
   if(Regs4[6]) {
      for(byte i=0; i<8; i++) {   // до 8-им дискретных выходов
        if(Regs4[6] & (1<<i)) {   // если они есть...
-         offOutsMask[portAddr[i]-&PORTB] |= diskrMask[i]; // запрещаем данную ногу уходить в 0
+         pi=0;
+         if(portAddr[i] == &PORTС) pi=1;  // вычислим индекс порта (как оказалос они не попорядку)
+         if(portAddr[i] == &PORTD) pi=2;
+         
+         offOutsMask[pi] |= diskrMask[i]; // запрещаем данную ногу уходить в 0
          portMask[i] = 0;                                // запрещаем данную ногу, как выход PWM
-       }
+       } 
      } 
    }
 }
