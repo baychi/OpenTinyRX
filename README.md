@@ -32,3 +32,6 @@ RX Firmware for openLRS compatible with Expert 2G/Tiny LRS
 - Added discrete outs
 - Added 11 bit/10 ch mode
 - Added autoreset to defaults in 1-st start with error settings
+
+15 nov 2013 (version F8)
+- Bugfix in rebind function. Void deadloop.
