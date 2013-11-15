@@ -402,7 +402,7 @@ void makeBind(void)                         // собственно поиск �
   byte hops[HOPE_NUM];
   byte i,j,k,l,n,hCnt;
   byte bind;
-  unsigned long t;
+  unsigned long t,maxT;
   byte ue=check_modes(5)==0;    // флаг, разрешающий UART
   
   sei();
@@ -465,13 +465,13 @@ repeatFind:
   
   //
   // Ищем последовательность прыжков
+  maxT=millis()+MAX_BIND_TIME;                  // максимальное время на поиск последовательности
 repTimes:
   if(ue) Serial.print("\r\nTimes: ");   
   n=0;
   for(i=1; i<hCnt; i++) {                     
-    t=millis()+MAX_BIND_TIME;
     while(!findHop(hops[0],259,bind)) {        // ждем первый канал
-      if(millis() > t) goto repeatAll;         // но не бесконечно
+      if(millis() > maxT) goto repeatAll;         // но не бесконечно
     }
     t=millis();
     if(findHop(hops[i],599,bind)) {            // проверяем, сколко времени надо ждать относительно первого
