@@ -43,7 +43,7 @@ void tryRecvSat(void)
       satIn[satCntr++]=in;
       if(satCntr >= SAT_PACK_LEN) {  // достигли конца пакета
          satCntr=0;             
-         if(CRC8(satIn+2,SAT_PACK_LEN-3) == 0) {  // проверяем на целостность
+         if(calcCRC(satIn) == 0) {  // проверяем на целостность
              lastSatTime=time;     // фиксируем время пакета
              satRecFlag = 1;       // и флаг его наличия
              break;
@@ -163,8 +163,11 @@ void OutRSSI(byte val, byte weight)
     if(val == 0) avr=127;       // пищим, когда пакет потерян
     else avr=0; 
   } else {                      // режим усреденеия
-    curAvr=curAvr-curAvr/navr + val*weight;
-    avr=curAvr/navr;
+    if(val == 0 && weight == 8) { avr=0; curAvr=0; }  // если связь потеряна, RSSI=0
+    else { 
+      curAvr=curAvr-curAvr/navr + val*weight;
+      avr=curAvr/navr;
+    }
   }
    analogWrite(RSSI_OUT,avr);
    lastRSSI=avr;
@@ -173,13 +176,13 @@ void OutRSSI(byte val, byte weight)
 
 void dOutsInit()               // инициализация дискретных выходов
 {
-  word pi;
+  byte pi;
   
   if(Regs4[6]) {
      for(byte i=0; i<8; i++) {   // до 8-им дискретных выходов
        if(Regs4[6] & (1<<i)) {   // если они есть...
          pi=0;
-         if(portAddr[i] == &PORTC) pi=1;  // вычислим индекс порта (как оказалос они не попорядку)
+         if(portAddr[i] == &PORTC) pi=1;        // вычислим индекс порта (как оказалос они не попорядку)
          if(portAddr[i] == &PORTD) pi=2;
          
          offOutsMask[pi] |= diskrMask[i]; // запрещаем данную ногу уходить в 0
@@ -202,13 +205,18 @@ void Write8bitcommand(unsigned char command);
 void to_sleep_mode(void); 
 
 char htxt2[] PROGMEM = "Press 'm' to start MENU in 10 sec";
+unsigned char prevPR=0;
+
+void prepRSSI()            // подготовка нового измерения RSSI
+{
+    Rx_RSSI=0; N_RSSI=0;  Pause_RSSI=0; N_pause=0;
+}
 
 //############ MAIN LOOP ##############
 void loop() 
 {
-  unsigned char prevPR=0;
   unsigned char i, j, afc_counter=0;
-  unsigned char crc, first_data = 0;
+  unsigned char crc;
   unsigned char sfsFlag=0;     // признак что последний пакет содержал признак записи FS 
   int temp_int, afc_avr=0;
   long tdif, btime;
@@ -305,17 +313,23 @@ hotRest:
 	  RF_Rx_Buffer[i] = read_8bit_data(); 
        }  
        rx_reset();            
-                                
-       crc=CRC8(RF_Rx_Buffer+2,RF_PACK_SIZE-3); // проверяем принятый пакет 
+
+       j=hopping_channel;
+extern unsigned long rTime;
+       Hopping();                      // Hop to the next frequency
+       last_hopping_time = rTime;      // берем реальное время приема пакета
+       RF_Mode = Receive;              // запускаем новый прием
+       
+       crc=calcCRC(RF_Rx_Buffer);
        if(crc != 0) {
          if(!satFlag) Serial.println("CRC!");    // Ошибка CRC пакета
        } else if(RF_Rx_Buffer[0] != Regs4[1]) {   // проверка номера линка 
          if(!satFlag) Serial.println("BIND!");   // ошибка номера линка
          crc=0xff;                               // crc=0 как флаг нормального пакета
        }  else {                                 
-         Buf_To_Servo(RF_Rx_Buffer);             // преобразуем в PWM
+         i=Buf_To_Servo(RF_Rx_Buffer);            // преобразуем в PWM (возвращает бит установки FS)
 
-	 if(RF_Rx_Buffer[RF_PACK_SIZE-1] == 0x1)  { //Set Failsafe
+	 if(i) {                                //Set Failsafe
            if(!sfsFlag) {
              if(!satFlag) Serial.println("FS W");
                 save_failsafe_values();          // при первом появлении признака, пишем в EEPROM
@@ -345,10 +359,10 @@ hotRest:
           if(!satFlag) {
             Serial.print("R=");   Serial.print(N_RSSI);
             Serial.print(" S=");   Serial.print(statMin);  // номер записи сохраняемой статистикм
-            Serial.print(" C=");   Serial.print(hopping_channel+1);
+            Serial.print(" C=");   Serial.print(j+1);
             Serial.print(" A=");   Serial.print(temp_int);
             Serial.print(" Rn=");  Serial.println(Pause_RSSI);  // уровень шума
-/***************************************
+/**************************************
             if(hopping_channel == 0) {                     // отладка !!!!
               for(i=0; i<RC_CHANNEL_COUNT; i++) {
                   Serial.print(Servo_Position[i]);
@@ -356,12 +370,13 @@ hotRest:
              }
              Serial.println();
             }
-*****************************************/            
+****************************************/            
           }
           #endif
-          curStat.rssi[hopping_channel] += N_RSSI;     // для статистики
-          curStat.noise[hopping_channel] += Pause_RSSI;
-          statCntr[hopping_channel]++;                 // считаем циклы
+          curStat.rssi[j] += N_RSSI;     // для статистики
+          curStat.noise[j] += Pause_RSSI;
+          statCntr[j]++;                 // считаем циклы
+          prepRSSI();                    // запускаем новый цикл
        
 // 
 // Подстройка частоты
@@ -383,7 +398,7 @@ hotRest:
 
        	 beacon_flag=failsafe_mode = 0; // deactivate failsafe mode
          self_pack_time=last_beacon_time=last_pack_time=time=millis(); // record last package time
-         search_mode=0;      // отменяем режим поиска
+         search_mode=0;               // отменяем режим поиска
          rl_counter=0;
 
          lastPackBad=0;        // хороший пакет 
@@ -394,20 +409,15 @@ hotRest:
          }
        }
                                  
-extern unsigned long rTime;
-       Hopping(); //Hop to the next frequency
-       last_hopping_time = rTime;      // берем реальное время приема пакета
-                               
-       RF_Mode = Receive;              // запускаем новый прием
        Green_LED_OFF;
        sendSbus();                     // поддержка цикла отправки SBUS
-       delayMicroseconds(499);         // что-бы гарантировать RSSI
+//       delayMicroseconds(499);         // что-бы гарантировать RSSI 
        continue;
      }
 
-     time = millis();            // текущее время
+     time = millis();           // текущее время
      tdif=time - last_hopping_time;  // время с момента последнего ереключения частоты (приема пакета)
-     sendSbus();               // поддержка цикла отправки SBUS
+     sendSbus();                // поддержка цикла отправки SBUS
 
      if(doFrecHandCorr()) goto hotRest;  // поддержка ручной подстройки частоты
      if(menuFlag && time-start_time < MENU_WAIT_TIME) {   // даем 10 сек на вход в меню
@@ -419,7 +429,7 @@ extern unsigned long rTime;
      } else tryRecvSat();        // в остальное время принимаем пакеты от саттелитов
        
 //
-// Если данные сателита более актуальны чем свои
+// Если данные сателлита более актуальны чем свои
      if(satRecFlag && lastSatTime > self_pack_time+33) {
           Buf_To_Servo(satIn);        // обрабатываем пакет
           Direct_Servo_Drive();       // выводим на сервы
@@ -467,30 +477,32 @@ extern unsigned long rTime;
          if(search_mode == 0) {
            if(!failsafe_mode)  Red_LED_ON;   // зажигаем карсный для индикации потреи
 
+//          last_hopping_time += 32;  // Что-бы не терять синхронизацию  
             if(hopping_channel&1) last_hopping_time += 32;  // Что-бы не терять синхронизацию  
             else last_hopping_time += 31;                  // добавляем 31.5 мс в среднем
          } else last_hopping_time=time;
                                
+         j=hopping_channel;
+         Hopping();              //Hop to the next frequency
+         curStat.lost[j]++;            // для статистики
+         lastPackBad=1;                              // флажок битого пакета для SBUS              
          OutRSSI(0,search_mode*7+1);                       // выводим 0-й RSSI
           
          if(!satFlag) {
              Serial.print("$RL");
              Serial.print(++rl_counter);
           #if defined(Serial_RSSI)
-             if(N_pause) prevPR= (Pause_RSSI/=N_pause);      // вычислим средний шум в паузе
+             if(N_pause) prevPR=(Pause_RSSI/=N_pause);      // вычислим средний шум в паузе
              else Pause_RSSI=prevPR;
              Serial.print(" S=");   Serial.print(statMin); 
-             Serial.print(" C=");   Serial.print(hopping_channel+1);
+             Serial.print(" C=");   Serial.print(j+1);
              Serial.print(" Rn=");  Serial.print(Pause_RSSI);  // уровень шума
           #endif
              Serial.println();
          } 
-         curStat.lost[hopping_channel]++;            // для статистики
-         lastPackBad=1;                              // флажок битого пакета для SBUS              
-         Hopping(); //Hop to the next frequency
+         prepRSSI();                    // запускаем новый цикл замеров
       }  
                               
-
 //
 //  Маяк при отсутствии связи
                     
