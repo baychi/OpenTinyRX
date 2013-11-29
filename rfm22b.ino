@@ -12,7 +12,7 @@
 
 // Режимы RFM для 7-го регистра
 #define RF22B_PWRSTATE_READY    01 
-#define RF22B_PWRSTATE_TX        0x09 
+#define RF22B_PWRSTATE_TX       0x09 
 #define RF22B_PWRSTATE_RX       05 
 
 // Режимы прерывания для 5-го регистра
@@ -357,14 +357,15 @@ void beacon_send(void)
 #if (__AVR_ATmega328P__ == 1) 
 static byte afcCntr;           // для вычисления поправки частоты
 static int afcAvr;      
+static byte futMode;           // для определения режима 
 
-bool findHop(byte cnl, word maxTime, byte bind=0)  // отлов пакета за заданное время     
+bool findHop(byte cnl, word maxTime, byte bind=0, byte afc=0)  // отлов пакета за заданное время     
 {
   byte i,crc;
   
   wdt_reset();               //  поддержка сторожевого таймера
-  _spi_write(0x1D, 0x40);    //  AFC enable
   _spi_write(0x79, cnl);
+  if(afc) _spi_write(0x1D, 0x40);    //  AFC enable
   to_rx_mode(); 
   unsigned long t=millis()+maxTime;
   RF_Mode = Receive;              // Start next packet wait
@@ -379,14 +380,25 @@ bool findHop(byte cnl, word maxTime, byte bind=0)  // отлов пакета з
        RF_Rx_Buffer[i] = read_8bit_data(); 
      }  
      rx_reset();
-                                
-     crc=CRC8(RF_Rx_Buffer+2,RF_PACK_SIZE-3); // проверяем принятый пакет 
+
+     if(futMode) calcCRC(RF_Rx_Buffer);  // проверяем принятый пакет
+     else{                             // если режим не определен 
+       crc=CRC8(RF_Rx_Buffer+2,RF_PACK_SIZE-3);  // пробуем классику
+       if(crc == 0) Regs4[5] &= 1;     // убираем 2-ку
+       else {
+         crc=CRC8(RF_Rx_Buffer+1,RF_PACK_SIZE-1);  // или пробуем режим Futaba                             
+         if(crc == 0) Regs4[5]=2;     // запоминаем режим  
+       }
+     }
      if(crc == 0) {
+       futMode=1;                      // режим опеределен 
        if(bind && bind != RF_Rx_Buffer[0]) return false;  // если надо, сверяем бинд
-       i=_spi_read(0x2B);   // читаем отклонение частоты  
-       if(i>128) afcAvr -= (256-i);
-       else afcAvr += i;
-       afcCntr++;
+       if(afc) { 
+         i=_spi_read(0x2B);   // читаем отклонение частоты  
+         if(i>128) afcAvr -= (256-i);
+         else afcAvr += i;
+         afcCntr++;
+       }
        return true;
      }
   }
@@ -408,14 +420,17 @@ void makeBind(void)                         // собственно поиск �
   sei();
 
 repeatAll:
-  hCnt=bind=0;                 // 0 - нет привязки 
-  afcAvr=afcCntr=0;       // для вычисления откл. частоты
-  if(Regs4[2] < 165 || Regs4[2] > 235) Regs4[2]=199;     // на всякий случай проверим поправку
+  futMode=hCnt=bind=0;                 // 0 - нет привязки, режим работы не определен 
+  afcAvr=afcCntr=0;                    // для вычисления откл. частоты
+  if(Regs4[2] < 170 || Regs4[2] > 230) Regs4[2]=199;     // на всякий случай проверим поправку
   
   RF22B_init_parameter();      // подготовим RFMку 
   to_rx_mode(); 
   SAW_FILT_OFF                 
-  _spi_write(0x1D, 0x00);      //  AFC disable
+  _spi_write(0x1D, 0x00);    //  AFC disable
+//  _spi_write(0x69, 0x00);    //  AGC disable
+//  _spi_write(0x72, 0x17);      // wide frequency deviation to 4350
+//  _spi_write(0x1c, 0x21);    // IF filter bandwidth
   rx_reset();
 
   if(ue) Serial.print("\r\nBind find start: ");
@@ -448,7 +463,7 @@ repeatFind:
  //
  // Елси есть кандидаты на отлов
 
-  if(findHop(k,259,bind)) {                // проверяем канал 
+  if(findHop(k,259,bind)) {               // проверяем канал 
     bind=RF_Rx_Buffer[0];                 // фиксируем бинд 
     if(ue) { Serial.print(k); Serial.write(' '); }
     hops[hCnt++]=k;  // берем до 8-ми каналов, лежащих выше порога
@@ -465,16 +480,17 @@ repeatFind:
   
   //
   // Ищем последовательность прыжков
-  maxT=millis()+MAX_BIND_TIME;                  // максимальное время на поиск последовательности
+  maxT=millis()+MAX_BIND_TIME/3;                // максимальное время на поиск последовательности
 repTimes:
   if(ue) Serial.print("\r\nTimes: ");   
   n=0;
   for(i=1; i<hCnt; i++) {                     
-    while(!findHop(hops[0],259,bind)) {        // ждем первый канал
+    do {
       if(millis() > maxT) goto repeatAll;         // но не бесконечно
-    }
+    } while(!findHop(hops[0],259,bind,1));        // ждем первый канал
+
     t=millis();
-    if(findHop(hops[i],599,bind)) {            // проверяем, сколко времени надо ждать относительно первого
+    if(findHop(hops[i],599,bind,1)) {            // проверяем, сколько времени надо ждать относительно первого
        t=millis()-t; 
        j=(t-8)/32; 
        if(j >= HOPE_NUM) j-=HOPE_NUM;
@@ -511,7 +527,8 @@ repTimes:
 
   afcAvr/=afcCntr;
   Regs4[1]=bind;                              // формируем бинд
-  if(abs(afcAvr) < 15)  Regs4[2] -= afcAvr;   // и поправка кварца
+   
+  if(abs(afcAvr) < 35)  Regs4[2] -= afcAvr;   // и поправка кварца
   if(ue) {
     Serial.print("Bind=");   Serial.print(bind);
     Serial.print(" Fcorr=");   Serial.print(Regs4[2]);
@@ -520,12 +537,13 @@ repTimes:
     Serial.println(" End");
   }
 
-//  goto repeatAll;              // !!!!!!!!!!!!!!!!!!!
-
+  // проверяем остальные настройки на корректность
+  Regs4[3]=Regs4[6]=0;                        // сбрасываем удлинитель хода и маски дискр каналов
+  if(Regs4[4] > 1) Regs4[4]=0;                 
+  
   delete buf;
   write_eeprom();              // записываем новую привязку в EEPROM 
   Red_LED_ON;
-//  if(!ue) 
 }
 #else
 void makeBind(void)                         // собственно поиск передатчика
