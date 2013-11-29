@@ -55,7 +55,9 @@ byte flash_check(void)
 {
   unsigned int i,sign,ks=0;
   
-  for(i=0; i<FLASH_SIZE; i++)        // считаем сумму 
+  if(version[1] == 0) return 0;           // при отладке программы, механизм можно отключить
+  
+  for(i=0; i<FLASH_SIZE; i++)             // считаем сумму 
       ks+=pgm_read_byte(i);
   
    sign=version[0] + (version[1]<<8);     // сигнатура из номера версии
