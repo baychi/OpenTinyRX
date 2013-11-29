@@ -35,3 +35,9 @@ RX Firmware for openLRS compatible with Expert 2G/Tiny LRS
 
 15 nov 2013 (version F8)
 - Bugfix in rebind function. Void deadloop.
+
+29 nov 2013 (version F9)
+- Added Futaba mode channel coding (880-1520-2160 mks);
+- Added RSSI (ch15) & noise (ch14) in Sbus packet;
+- some bugfixes;
+
