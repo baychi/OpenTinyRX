@@ -3,7 +3,7 @@
 // **      RFM22B/23BP/Si4432 Reciever with Expert protocol **
 // **      This Source code licensed under GPL            **
 // **********************************************************
-// Latest Code Update : 2013-10-22
+// Latest Code Update : 2013-12-28
 // Supported Hardware : Expert Tiny/2G RX, Orange/OpenLRS Rx boards (store.flytron.com)
 // Project page       : https://github.com/baychi/OpenTinyRX
 // **********************************************************
@@ -14,7 +14,7 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 8, 1 };
+unsigned char version[] = { 9, 1 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
