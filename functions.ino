@@ -109,76 +109,109 @@ void Hopping(void)
 // поддержака SAW фильтра:
    if(hn >= SAWreg[0] && hn <= SAWreg[1]) SAW_FILT_ON // если мы внутри частот фильтра
    else SAW_FILT_OFF
-
-    Rx_RSSI=0; N_RSSI=0;  Pause_RSSI=0; N_pause=0;
 }
 
+byte futabaDirect[14];         // копия прямого кодирования 10-ти 11 битных каналов для передачи в sbus
 // Преобразование данных входного буфера buf в длительности PWM
-void Buf_To_Servo(unsigned char buf[])
+byte Buf_To_Servo(unsigned char buf[])
 {
-     byte i,lowBit=buf[RC_CHANNEL_COUNT+3];
-     byte bit11=buf[RC_CHANNEL_COUNT+1];    // 12-й канал, может быть использовани как хранилище 11-го бита
      byte ServoStrechNum=(Regs4[3]%10)-1;   // Номер сервы с расширенном диапазоном
      byte ServoStrechNum2=(Regs4[3]/10)-1;  // Номер сервы с расширенном диапазоном 2
-     int  temp_int;
+     byte i,m,fsFlag=0;
+     int pwm;
 
-     for(i=0; i<RC_CHANNEL_COUNT; i++) { // Write into the Servo Buffer
-        temp_int = buf[i+2] << 2;        // основные 8 бит значения
-        if(i<8) {                        // 2-й байт пакета содержит старшие биты 8-ми первых каналов 
-           if(buf[1]&(1<<i)) temp_int |= 0x400;          // это старший бит первых 8-ми каналов
-           if(i<7 && (lowBit&(2<<i))) temp_int |= 2;     // делаем 10 бит для 7 первых каналов из упр. байта
-           if(Regs4[5] && (bit11&(1<<i))) temp_int |= 1; // а здесь добавляем еще и 11-й бит, если разрешено 
-         } else temp_int <<= 1;          // для каналов 9-12 точность 8 бит
+     if(Regs4[5] != 2) {                    // Стандартный пакет Экспертовского представления
+       byte lowBit=buf[RC_CHANNEL_COUNT+3];
+       byte bit11=buf[RC_CHANNEL_COUNT+1];    // 12-й канал, может быть использовани как хранилище 11-го бита
+       for(i=0; i<RC_CHANNEL_COUNT; i++) { // Write into the Servo Buffer
+         pwm = buf[i+2] << 2;        // основные 8 бит значения
+         if(i<8) {                        // 2-й байт пакета содержит старшие биты 8-ми первых каналов 
+           if(buf[1]&(1<<i)) pwm |= 0x400;          // это старший бит первых 8-ми каналов
+           if(i<7 && (lowBit&(2<<i))) pwm |= 2;     // делаем 10 бит для 7 первых каналов из упр. байта
+           if(Regs4[5] && (bit11&(1<<i))) pwm |= 1; // а здесь добавляем еще и 11-й бит, если разрешено 
+         } else pwm <<= 1;          // для каналов 9-12 точность 8 бит
 
-         if(i == ServoStrechNum || i == ServoStrechNum2) {     // реализуем расширение диапазона сервы на 150%
-           temp_int-=1024;
-           temp_int+=temp_int>>1;       // умножаем на 1.5
-           if(temp_int > 1200) temp_int=1200;
-           else if(temp_int < -1200) temp_int=-1200;
-           temp_int+=1024;
-         }
-
-         if(i >= 8 && Regs4[5]) {
-           if(i == 8) temp_int |= (buf[12]&7);               // доводим 9-й канал до 11 бит, за счет 11-го
+         if(i >= 8 && Regs4[5]) {                  // Дополнительный режим 11 бит
+           if(i == 8) pwm |= (buf[12]&7);          // доводим 9-й канал до 11 бит, за счет 11-го
            else if( i == 9) {
-             temp_int |= ((buf[12] >> 3)&7);       // доводим 10-й канал до 11 бит
+             pwm |= ((buf[12] >> 3)&7);            // доводим 10-й канал до 11 бит
              Servo_Buffer[7] |= (buf[12]>>5)&2;    // и еще один 2-й бит в 8-й канал 
-           } else temp_int=0; 
+           } else pwm=0; 
          }
-
-         Servo_Buffer[i] = temp_int+1976;          // кодируем PWM в мкс*2
-      }
+         if(i == ServoStrechNum || i == ServoStrechNum2) {     // реализуем расширение диапазона сервы на 150%
+           pwm-=1024;
+           pwm+=pwm>>1;       // умножаем на 1.5
+           if(pwm > 1200) pwm=1200;
+           else if(pwm < -1200) pwm=-1200;
+           pwm+=1024;
+         }
+         Servo_Buffer[i] = pwm+1976;               // кодируем PWM в мкс*2
+       } 
+       fsFlag=(buf[RF_PACK_SIZE-1]&1);             //  возвращаем признак установки FS
+     } else {                           // В режме Futaba, 14 байт данных содержат десять 11-ти битных каналов
+       byte j,k;
+       word wm;
+       
+       for(i=0; i<sizeof(futabaDirect); i++) futabaDirect[i]=buf[i+1]; // скопируем непреобразованный пакет, для прямой пересылки в sbus
+       k=m=1;                           // счетчик байт в пакете и маска бита
+       for(i=0; i<10; i++) {  
+         pwm=0; wm=1;
+         for(j=0; j<11; j++) {          // счетчик бит в представлении
+           if(buf[k] & m) pwm |= wm;
+           wm += wm;
+           if(m == 0x80) { m=1; k++; } // обнуляем
+           else m = m + m;             // или двигаем маску
+         }
+         if(i == ServoStrechNum || i == ServoStrechNum2) {     // реализуем расширение диапазона сервы на 150%
+           pwm-=1024;
+           pwm+=pwm>>1;               // умножаем на 1.5
+           if(pwm > 1200) pwm=1200;
+           else if(pwm < -1200) pwm=-1200;
+           pwm+=1024;
+         }
+         Servo_Buffer[i]=((pwm+pwm+pwm+pwm+pwm)>>2) + 1760;   // формируем значение в PPM буфере
+       }
+       fsFlag=buf[k]&0x80;            // признак установки FS в пакете          
+     }
 
 //
-//  Отрабатываем дискреные выхода, если есть
+//  Отрабатываем дискретные выхода, если есть
 
       if(Regs4[6]) {
+        m=1;
         for(i=0; i<8; i++) {
-           if(Regs4[6] & (1<<i)) { 
-              if(Servo_Buffer[i] > 3000) *portAddr[i] |= diskrMask[i];   // включаем
+           if(Regs4[6] & m) { 
+              if(Servo_Buffer[i] > 3000) *portAddr[i] |= diskrMask[i];    // включаем
               else *portAddr[i] &= ~diskrMask[i];                         // или отключаем
            }
+           m += m;
         }
       }
       
+      return fsFlag;
 }  
 
 void Direct_Servo_Drive(void)         // перекидываем ширины вых. импульсов из временного буфера в рабочий
 {
-    for(byte i=0; i<RC_CHANNEL_COUNT; i++) 
+    for(byte i=0; i<RC_CHANNEL_COUNT; i++) {
+      cli();
       Servo_Position[i] = Servo_Buffer[i];  
-  
-    if(RSSIreg[2]) 
-       Servo_Position[RSSIreg[2]-1]=(lastRSSI*8)+2000;    // выводим RSSI вместо одно из каналов 
+      sei();
+    }
+    if(RSSIreg[2]) {
+      cli();
+      Servo_Position[RSSIreg[2]-1]=(lastRSSI*8)+2000;    // выводим RSSI вместо одно из каналов 
+      sei();
+    }
     PWM_enable=1;                     // включаем генерацию PWM
     prepSbusPkt();                    // готовим новый SBUS пакет
 }
  
 // Вычисление CRC8 по массиву данных
 //
-unsigned char CRC8(unsigned char buf[], unsigned char len)
+byte CRC8(byte buf[], byte len)
 {
-   unsigned char i,j,crc=0;
+   byte i,j,crc=0;
     
    for(i=0; i<len; i++) {
      crc = crc ^ buf[i];
@@ -190,3 +223,9 @@ unsigned char CRC8(unsigned char buf[], unsigned char len)
 
    return crc;
 }  
+
+byte calcCRC(byte buf[])
+{
+   if(Regs4[5] == 2) return CRC8(buf+1,RF_PACK_SIZE-1);  // проверяем принятый пакет в режиме Futaba
+   else return CRC8(buf+2,RF_PACK_SIZE-3);               // проверяем принятый пакет в режиме Эксперта
+}       
