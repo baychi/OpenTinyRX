@@ -102,7 +102,7 @@ ISR(TIMER1_OVF_vect)
 {
   unsigned int us; // this value is not real microseconds, we are using 0.5us resolution (2048 step), this is why the all values 2 times more than real microseconds.
   
-  while (TCNT1<32);  // Убираем неопределенность входа в прерывание (лишний джиттер)
+   while (TCNT1<32);  // Убираем неопределенность входа в прерывание (лишний джиттер)
 
    PORTB &= offOutsMask[0];      // стави все выходы PPM/PWM в 0
    PORTC &= offOutsMask[1];
@@ -122,7 +122,7 @@ ISR(TIMER1_OVF_vect)
      } else {
        char i=Servo_Number;                // i  - номер воспроизводимого канала, он не всегда равен порядковому номеру импульса
        if(receiver_mode == 2) i += pwm1chnl-1;   // это номер воспроизводимого канала в режиме SBUS
-       us = Servo_Position[i];            // берем ширину импульса из нужного канала
+       us = Servo_Position[i]-36;         // берем ширину импульса из нужного канала (36 - поправка: 16 мкс уборку джиттера и еще 2 мкс на сам драйвер)
        total_ppm_time += us;              // добавляем ее к общей сумма
  
        // а теперб вычислим куда его выводить
@@ -140,8 +140,8 @@ ISR(TIMER1_OVF_vect)
      }
      if(receiver_mode==1 && Servo_Number <= MAX_PPM_OUT) { // формируем начало PPM импулmcа
        Serial_PPM_OUT_HIGH;           // ставим 1-ку на PPM выходе
-       while(TCNT1 <500);             // !!!!! Не очень хорошая идея, паузы но пока так
-       us-=503;                       // вычитаемм сделанную паузу, с небольшим запасом
+       while(TCNT1 < 532);            // !!!!! Не очень хорошая идея, паузы но пока так
+       us-=500;                       // вычитаемм сделанную паузу, с небольшим запасом
        Serial_PPM_OUT_LOW;            // ставим 1-ку на PPM выходе
      }
   } else us=ppmPwmCycleTime;    // обеспечиваем холостой цикл
@@ -411,7 +411,6 @@ extern unsigned long rTime;
                                  
        Green_LED_OFF;
        sendSbus();                     // поддержка цикла отправки SBUS
-//       delayMicroseconds(499);         // что-бы гарантировать RSSI 
        continue;
      }
 
@@ -454,7 +453,7 @@ extern unsigned long rTime;
 
         // в зависимости от того сколько прошло ждем пакеты синхроннно или асинхронно
       if(time-self_pack_time > TIME_TO_SEARCH) search_mode=1;
-      if(tdif > 0 && tdif < 5) {              // первые 5 мс меряем уровень шума
+      if(tdif > 1 && tdif < 6) {              // первые 5 мс меряем уровень шума
          delayMicroseconds(99);
 	 Pause_RSSI += _spi_read(0x26);       // Read the RSSI value
          N_pause++;                           // для усреднения
@@ -463,7 +462,7 @@ extern unsigned long rTime;
       else {                                   // или продолжнаем ловить в заданное время
         next_time = 35;	
 // Операции во время ожидания пакета
-        if(tdif > 10 && tdif < 21) {          // где-то в середине пакета читаем RSSI 
+        if(tdif > 11 && tdif < 23) {          // где-то в середине пакета читаем RSSI 
           delayMicroseconds(99);
           Rx_RSSI += _spi_read(0x26);         // Read the RSSI value
           N_RSSI++;                           // для усреднения
@@ -477,7 +476,6 @@ extern unsigned long rTime;
          if(search_mode == 0) {
            if(!failsafe_mode)  Red_LED_ON;   // зажигаем карсный для индикации потреи
 
-//          last_hopping_time += 32;  // Что-бы не терять синхронизацию  
             if(hopping_channel&1) last_hopping_time += 32;  // Что-бы не терять синхронизацию  
             else last_hopping_time += 31;                  // добавляем 31.5 мс в среднем
          } else last_hopping_time=time;
@@ -500,6 +498,8 @@ extern unsigned long rTime;
           #endif
              Serial.println();
          } 
+         curStat.noise[j] += Pause_RSSI;
+         statCntr[j]++;                 // считаем циклы
          prepRSSI();                    // запускаем новый цикл замеров
       }  
                               
@@ -510,7 +510,7 @@ extern unsigned long rTime;
        statLoop();   
        tdif=time-last_beacon_time; 
        btime=BeaconReg[5]; btime *= 1000; 
-       if((beacon_flag && tdif > BEACON_INTERVAL) || tdif > btime) {  // С интервалом в 7 секунд после первой паузы
+       if((beacon_flag && tdif > BEACON_INTERVAL) || tdif > btime) {  // С интервалом в 5 секунд после первой паузы
           beacon_flag=1; 
           if(BeaconReg[5] != 0xff) {                                 // если маяк не запрещен
             if(!satFlag) Serial.println("SOS"); 
@@ -520,6 +520,7 @@ extern unsigned long rTime;
           RF22B_init_parameter();   // go back to normal RX
           rx_reset();
           last_beacon_time=time;
+          last_hopping_time=millis();
        }
     } 
 
