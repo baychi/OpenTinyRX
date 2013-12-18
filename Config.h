@@ -14,7 +14,7 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 9, 1 };
+unsigned char version[] = { 10, 1 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -44,7 +44,7 @@ unsigned char version[] = { 9, 1 };
 #define CARRIER_FREQUENCY  433075  // 433Mhz startup frequency !!! не менять
 #define HOPPING_STEP_SIZE  6 // 60kHz hopping steps
 #define HOPE_NUM          8 /* number of hope frequensies */ 
-#define AFC_POROG         4 /* предельное отклонение частоты, требующее коррекции */
+#define AFC_POROG        4  /* предельное отклонение частоты, требующее коррекции */
 
 //###### HOPPING CHANNELS #######
 //Каналы прыжков (регистры 11-18) Select the hopping channels between 0-255
