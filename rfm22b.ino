@@ -428,9 +428,7 @@ repeatAll:
   to_rx_mode(); 
   SAW_FILT_OFF                 
   _spi_write(0x1D, 0x00);    //  AFC disable
-//  _spi_write(0x69, 0x00);    //  AGC disable
-//  _spi_write(0x72, 0x17);      // wide frequency deviation to 4350
-//  _spi_write(0x1c, 0x21);    // IF filter bandwidth
+
   rx_reset();
 
   if(ue) Serial.print("\r\nBind find start: ");
