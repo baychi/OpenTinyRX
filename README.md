@@ -42,3 +42,8 @@ Manual in Wiki: https://github.com/baychi/OpenTinyRX/wiki/%D0%A0%D1%83%D0%BA%D0%
 - Added RSSI (ch15) & noise (ch14) in Sbus packet;
 - some bugfixes;
 
+19 dec 13 (version F10)
+- bugfix PWM width - remove adition 18 mks per impulse
+- noise level now save in statistisc even without signal
+- show version in menu header
+
