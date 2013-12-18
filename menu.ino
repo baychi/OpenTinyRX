@@ -181,6 +181,14 @@ void showNoise(char str[])             // отображаем уровень ш
   }
 }
 
+char htxt1[] PROGMEM = "\n\rBaychi soft 2013";
+char htxt3[] PROGMEM = "RX Open Expert V2 F";
+void printHeader(void)
+{
+  printlnPGM(htxt1);
+  printlnPGM(htxt3,0); Serial.println(version[0]);
+}  
+
 // Перенесем текст меню в память программ
 char mtxt1[] PROGMEM = "To Enter MENU Press ENTER";
 char mtxt2[] PROGMEM = "Type Reg and press ENTER, type Value and press ENTER (q=Quit; ss/sl/sa=Stat)";
@@ -191,7 +199,9 @@ void showRegs(void)         // показать значения регистр�
 {
   unsigned char i,j=0,k;
   
-  printlnPGM(mtxt3);
+  printlnPGM(mtxt3,0);
+  printlnPGM(htxt3+14,0); Serial.println(version[0]);
+
   for(int i=1; i<=REGS_NUM; i++) {
     if(regs[j] == i) {
       Serial.print(i);
@@ -260,13 +270,6 @@ rep:
   }    
 }  
 
-char htxt1[] PROGMEM = "\n\rBaychi soft 2013";
-char htxt3[] PROGMEM = "RX Open Expert V2 F";
-void printHeader(void)
-{
-  printlnPGM(htxt1);
-  printlnPGM(htxt3,0); Serial.println(version[0]);
-}  
 
 static byte tempAfc=199;     // временная поправка частоты 
 
