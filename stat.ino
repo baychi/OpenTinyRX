@@ -11,40 +11,44 @@
 #include <avr/boot.h>
 #define SIGRD 5                     // бит регистров идентификации для boot_signature_byte_get
 
-struct saveStatRec {
+struct saveStatRec {                // текущая статистика и сохраняемая во FLASH
    unsigned char flightNum;         // номер полета (инкрементируется при каждом включении)
    unsigned char FS;                // количество провалов связи и FS в момент сохранения (старший бит)
    unsigned char lost[HOPE_NUM];    // количество потерянных пакетов за интервал (в миинуту макс 238) FF, FE - все - нет потерь (что-бы не насиловать FLASH)
    unsigned char rssi[HOPE_NUM];    // средний уровень RSSI за интервал
    unsigned char noise[HOPE_NUM];   // средний уровень шума за интервал
-} saveStat;                 // текущая статистика и сохраняемая во FLASH
+} saveStat;        
 
 unsigned char statByte,flightCntr=0;        // номер полета
 unsigned long statTime;                     // время последней записи статистики
 unsigned int  statAdr=STAT_EPROM_ADR;      // адрес в EEPROM
 
-void statSave(void)    // записать очередную запись во FLASH 
+void resCurStat(void)               // подготовить новую статистику
 {
-  unsigned char i,div; 
-  saveStat.flightNum=flightCntr;
-  saveStat.FS=curStat.FS;
-  if(failsafe_mode || (PWM_enable == 0)) saveStat.FS |= 0x80;       // признак, что находимся в состоянии FS
-  curStat.FS=0;
-  
-  for(i=0; i<HOPE_NUM; i++) {    // подготовим новую статистику и сохраненние старой
-    if(statCntr[i]) div=statCntr[i];  // что-бы не делить на ноль
-    else div=1;
-    saveStat.lost[i]=curStat.lost[i];
-    saveStat.rssi[i]=curStat.rssi[i]/div;
-    saveStat.noise[i]=curStat.noise[i]/div;
-
+  for(byte i=0; i<HOPE_NUM; i++) {   
     curStat.lost[i]=0;
     curStat.rssi[i]=0;
     curStat.noise[i]=0;
-    statCntr[i]=0;
-//    if(saveStat.lost[i] == 0) saveStat[i]=0xff;      // что-бы не писать много 0-й во FLASH  
+    curStat.nc[i]=curStat.rc[i]=0;
+  }
+  curStat.FS=0;
+}
+
+void statSave(void)    // записать очередную запись во FLASH 
+{
+  unsigned char i; 
+  saveStat.flightNum=flightCntr;
+  saveStat.FS=curStat.FS;
+  if(failsafe_mode || (PWM_enable == 0)) saveStat.FS |= 0x80;       // признак, что находимся в состоянии FS
+  
+  for(i=0; i<HOPE_NUM; i++) {    // подготовим новую статистику и сохраненние старой
+    saveStat.lost[i]=curStat.lost[i];
+    saveStat.rssi[i]=saveStat.noise[i]=0;
+    if(curStat.rc[i]) saveStat.rssi[i]=curStat.rssi[i]/curStat.rc[i];  // средний сигнал
+    if(curStat.nc[i]) saveStat.noise[i]=curStat.noise[i]/curStat.nc[i]; // средний шум
   } 
-  statByte=0;                                       // запускаем фоновую запись
+  resCurStat();                  // обнулим текущую статистику
+  statByte=0;                    // запускаем фоновую запись
 }
 
 void statLoop(void)                                 // фоновой цикл записи статистики (максиммум 3 байта за раз
@@ -67,8 +71,8 @@ void statLoop(void)                                 // фоновой цикл �
         statByte++;
   } else if(statByte == sizeof(saveStat)+2){
        statByte++;
-       if(statMin == 0)  EEPROM.write(STAT_FLIGHT_ADR,flightCntr);  // номер полета пишем после первой заиси, что-бы не суетится
-       statMin++;
+       if(curStat.min == 0)  EEPROM.write(STAT_FLIGHT_ADR,flightCntr);  // номер полета пишем после первой заиси, что-бы не суетится
+       curStat.min++;
   }
 
   if((time-statTime)/1000 >= STAT_INTERVAL) {      // интервал истек 
@@ -82,7 +86,6 @@ void statInit(void)                            // инициализация с�
    unsigned char i;
 
    i=boot_signature_byte_get(0x02);            // отличаем Мегу 168 от 328-й
-//   Serial.print("Mega sign="); Serial.println(i,HEX); 
    if(i == 0x94) LAST_EEPROM_ADR=504;          // 16*26 + 88
 
    statAdr=EEPROM.read(STAT_PTR_ADR);          // читаем указатель на очередную запись
@@ -99,17 +102,10 @@ void statInit(void)                            // инициализация с�
    }
    flightCntr++;                                 // ставим новый полет 
    if(flightCntr >= 100) flightCntr=0;           // меняется в интервале 1-100
-//   EEPROM.write(STAT_FLIGHT_ADR,flightCntr);
 
-  for(i=0; i<HOPE_NUM; i++) {    // подготовим новую статистику
-    curStat.lost[i]=0;
-    curStat.rssi[i]=0;
-    curStat.noise[i]=0;
-    statCntr[i]=0;
-  }
-  curStat.FS=0;
+  resCurStat();                   // готовим текущую статистику
+  curStat.min=0;                  // время пойдет с началом связи
   statByte=sizeof(saveStat);      // не будем писать, пока не накопим первую запись
-  statMin=0;
   statTime=millis();
 }
 
