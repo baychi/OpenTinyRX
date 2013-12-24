@@ -358,7 +358,7 @@ extern unsigned long rTime;
           #if defined(Serial_RSSI)
           if(!satFlag) {
             Serial.print("R=");   Serial.print(N_RSSI);
-            Serial.print(" S=");   Serial.print(statMin);  // номер записи сохраняемой статистикм
+            Serial.print(" S=");   Serial.print(curStat.min);  // номер записи сохраняемой статистикм
             Serial.print(" C=");   Serial.print(j+1);
             Serial.print(" A=");   Serial.print(temp_int);
             Serial.print(" Rn=");  Serial.println(Pause_RSSI);  // уровень шума
@@ -375,7 +375,8 @@ extern unsigned long rTime;
           #endif
           curStat.rssi[j] += N_RSSI;     // для статистики
           curStat.noise[j] += Pause_RSSI;
-          statCntr[j]++;                 // считаем циклы
+          curStat.rc[j]++;               // считаем циклы
+          curStat.nc[j]++;               // считаем циклы
           prepRSSI();                    // запускаем новый цикл
        
 // 
@@ -476,6 +477,7 @@ extern unsigned long rTime;
          if(search_mode == 0) {
            if(!failsafe_mode)  Red_LED_ON;   // зажигаем карсный для индикации потреи
 
+//          last_hopping_time += 32;  // Что-бы не терять синхронизацию  
             if(hopping_channel&1) last_hopping_time += 32;  // Что-бы не терять синхронизацию  
             else last_hopping_time += 31;                  // добавляем 31.5 мс в среднем
          } else last_hopping_time=time;
@@ -492,14 +494,14 @@ extern unsigned long rTime;
           #if defined(Serial_RSSI)
              if(N_pause) prevPR=(Pause_RSSI/=N_pause);      // вычислим средний шум в паузе
              else Pause_RSSI=prevPR;
-             Serial.print(" S=");   Serial.print(statMin); 
+             Serial.print(" S=");   Serial.print(curStat.min); 
              Serial.print(" C=");   Serial.print(j+1);
              Serial.print(" Rn=");  Serial.print(Pause_RSSI);  // уровень шума
           #endif
              Serial.println();
          } 
          curStat.noise[j] += Pause_RSSI;
-         statCntr[j]++;                 // считаем циклы
+         curStat.nc[j]++;                // считаем циклы
          prepRSSI();                    // запускаем новый цикл замеров
       }  
                               
