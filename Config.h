@@ -14,7 +14,7 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 10, 1 };
+unsigned char version[] = { 10, 3 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -142,14 +142,14 @@ volatile unsigned char RF_Mode = 0;  /* для RFMки */
 // Статистика полета за интервал (типично - минута)
 
 #define STAT_INTERVAL 60            /* время накопления записи статистики 1-60 сек */
-unsigned int  statCntr[HOPE_NUM],statMin=0;   // счетчик очередной записи статистики и минут 
 
 struct curStatRec {                 // Текущая накапливаемая статистика
-   unsigned char flightNum;         // номер полета (инкрементируется при каждом включении)
-   unsigned char FS;                // количество провалов связи и FS в момент сохранения (старший бит)
-   unsigned char lost[HOPE_NUM];    // количество потерянных пакетов за интервал (в миинуту макс 238) FF, FE - все - нет потерь (что-бы не насиловать FLASH)
-   unsigned int rssi[HOPE_NUM];     // средний уровень RSSI за интервал
-   unsigned int noise[HOPE_NUM];    // средний уровень шума за интервал
+   unsigned int FS,min;             // счетчик фаил Safe и минут
+   unsigned char lost[HOPE_NUM];    // количество потерянных пакетов за интервал (в миинуту макс 238)
+   unsigned int rssi[HOPE_NUM];     // усреднение RSSI за интервал
+   unsigned int noise[HOPE_NUM];    // усреднение шума за интервал
+   unsigned char rc[HOPE_NUM];      // счетчик усреднения RSSI
+   unsigned char nc[HOPE_NUM];      // счетчик усреднения шума
 } curStat;                          // текущая статистика 
 
 // Функции статистики
