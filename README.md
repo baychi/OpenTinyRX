@@ -47,5 +47,8 @@ Manual in Wiki: https://github.com/baychi/OpenTinyRX/wiki/%D0%A0%D1%83%D0%BA%D0%
 - noise level now save in statistisc even without signal
 - show version in menu header
 
-24 dec 13 (version 10 - not changed)
+25 dec 13 (version 11)
 - bugfix in statistics.
+- added relative output in statistic - sr;
+- added ouput level in dB in statistics - sR, sL, sA;
+- 
