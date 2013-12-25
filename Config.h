@@ -78,25 +78,11 @@ static unsigned char menuFlag=1;              // Флаг, разрешающи�
 //Serial RSSI is transmitting the RSSI value over serial port. You can use this function for debugging.
 #define Serial_RSSI //Serial RSSI value for analyzing
 
-// Channel Names and Numbers
-#define AILERON 0
-#define ELEVATOR 1
-#define THROTTLE 2
-#define RUDDER 3
-#define RETRACTS 4
-#define FLAPS 5
-#define AUX1 6
-#define AUX2 7
-#define AUX3 8
-#define AUX4 9
-#define AUX5 10
-#define AUX6 11
-
 #define RF_PACK_SIZE 16                 /* размер данных в пакете */
 #define RC_CHANNEL_COUNT 12             /* общее количество каналов управления */
-#define PWM_OUT_NUM 10                  /* максимальное количество PWM выходов в PWM/PPM режиме (до 12) */
-#define MAX_PPM_OUT 10                  /* максимальное количество PPM импульсов (не больше PWM_OUT_NUM) */
-#define MAX_SBUS_OUT 4                  /* максимальное количество PWM выходов в режмме SBUS */
+#define PWM_OUT_NUM 10                  /* максимальный номер канала на PWM выходах в PWM/PPM режиме (до 12) */
+#define MAX_PPM_OUT 10                  /* максимальное количество PPM импульсов (но не больше PWM_OUT_NUM) */
+#define MAX_SBUS_OUT 4                  /* максимальное количество PWM выходов в режиме SBUS */
 unsigned int ppmPwmCycleTime=40000;     // период цикла выдачи PPM/PWM импульсов в 0.5 мкс интервалах
 
 unsigned char RF_Rx_Buffer[RF_PACK_SIZE];
