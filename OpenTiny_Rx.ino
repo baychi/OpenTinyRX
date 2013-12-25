@@ -224,7 +224,7 @@ void loop()
   
   receiver_mode = check_modes(PPM_MODE_JUMPER); // режим PPM
   if(receiver_mode) {
-     reciever_outs=MAX_PPM_OUT;                 // в режиме PPM 
+     reciever_outs=PWM_OUT_NUM;                 // максимум PWM каналов в режиме PPM 
   } else if(check_modes(SBUS_MODE_JUMPER)) {    // проверяем на SBUS
      receiver_mode=2;
      reciever_outs=MAX_SBUS_OUT;
