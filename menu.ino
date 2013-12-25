@@ -191,7 +191,7 @@ void printHeader(void)
 
 // Перенесем текст меню в память программ
 char mtxt1[] PROGMEM = "To Enter MENU Press ENTER";
-char mtxt2[] PROGMEM = "Type Reg and press ENTER, type Value and press ENTER (q=Quit; ss/sl/sa=Stat)";
+char mtxt2[] PROGMEM = "Type Reg and press ENTER, type Value and press ENTER (q=Quit; ss/sl/sr/sa=Stat)";
 char mtxt3[] PROGMEM = "Rg=Val \tComments -----------------------";
 char mtxt4[] PROGMEM = "Execute rebind? Are you sure(y/n)?";
 
