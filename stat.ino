@@ -124,10 +124,9 @@ void print3(byte val)  // печать 3-цифр с выравниваем пр
 void print2(byte val)  // печать 2-цифр с выравниваем пробелами
 {
   int v=val*100;
-  val=v/(STAT_INTERVAL*8);
+  val=v/(238*STAT_INTERVAL/60);
   if(val > 99) val=99;
-  if(val < 10) printSpace(1);
-  else if(val <10) Serial.write(' ');
+  if(val < 10) Serial.write(' ');
   Serial.print(val);
   Serial.write(' ');
 }  
