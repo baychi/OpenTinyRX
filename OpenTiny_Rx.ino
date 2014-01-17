@@ -514,7 +514,7 @@ extern unsigned long rTime;
        btime=BeaconReg[5]; btime *= 1000; 
        if((beacon_flag && tdif > BEACON_INTERVAL) || tdif > btime) {  // С интервалом в 5 секунд после первой паузы
           beacon_flag=1; 
-          if(BeaconReg[5] != 0xff) {                                 // если маяк не запрещен
+          if(BeaconReg[0] != 0xff) {                                 // если маяк не запрещен
             if(!satFlag) Serial.println("SOS"); 
             beacon_send();                                           // Маяк посылает 2-х секундные посылки по 4 тона
           }
