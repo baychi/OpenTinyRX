@@ -38,6 +38,11 @@ void RFM22B_Int()
 void Red_LED_Blink(unsigned short blink_count)
 {
   unsigned char i;
+
+#if(RX_BOARD_TYPE == 1)         // с Тини особый случай
+    _spi_write(0x0d, 0x0a);     // gpio2 - управление  лампочкой
+#endif
+    
   for (i=0; i<blink_count; i++)     {
      wdt_reset();               //  поддержка сторожевого таймера
      delay(125);
@@ -45,9 +50,18 @@ void Red_LED_Blink(unsigned short blink_count)
        doMenu();
        return; 
      }
+
+#if(RX_BOARD_TYPE == 1)       // с Тини особый случай
+  _spi_write(0x0e, 0x04);     // зажигаем индикатор
+#else
      Red_LED_ON;
+#endif
      delay(125);
-     Red_LED_OFF;
+
+#if(RX_BOARD_TYPE == 1)       // с Тини особый случай
+  _spi_write(0x0e, 0x00);     // гасим индикатор
+   Red_LED_OFF;
+#endif
   }
 }
 
