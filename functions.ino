@@ -88,7 +88,7 @@ unsigned char check_modes(byte n)   // 0 - режим PWM/PPM; 1-анализа�
 
   #if(RX_BOARD_TYPE == 1)           // у Тини нет 10-го канала, проверяем на перемычку между 9 и GND
     if(n == 8) {
-      delayMicroseconds(2);
+      delayMicroseconds(199);
       if(digitalRead(pairs[n]) == LOW) return 1; // если притянут к земле, значит перемычка есть
 
       pinMode(pairs[n], OUTPUT);                // перемычка не найдена - восстанавливаем выход
@@ -97,10 +97,10 @@ unsigned char check_modes(byte n)   // 0 - режим PWM/PPM; 1-анализа�
   #endif
 
   digitalWrite(pairs[n+1], HIGH);   // CH1,3,5 is HIGH
-  delayMicroseconds(2);
+  delayMicroseconds(199);
   if (digitalRead(pairs[n]) == HIGH) 	{
 	digitalWrite(pairs[n+1], LOW); // CH1,3,5 is LOW
-	delayMicroseconds(2);
+	delayMicroseconds(199);
 	if (digitalRead(pairs[n]) == LOW) { // OK jumper plugged
 //             pinMode(pairs[n], OUTPUT);   // не восстанавливаем выход, что-бы не было конфликта
 	     return  1; // Jumper is set
