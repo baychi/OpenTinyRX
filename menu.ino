@@ -31,7 +31,7 @@ static char help1[] PROGMEM =  "Bind N";
 static char help2[] PROGMEM =  "Freq Corr";
 static char help3[] PROGMEM =  "Servo 150% strech num (1-12)";
 static char help4[] PROGMEM =  "Statistics enable";
-static char help22[] PROGMEM = "11bit/10ch (1=yes, 2=Futaba)";
+static char help22[] PROGMEM = "11bit/10ch (1=yes, 2/3=Futaba)";
 static char help23[] PROGMEM = "Discrete outputs mask";
 static char help5[] PROGMEM =  "Hop F1";
 static char help6[] PROGMEM =  "Hop F2";
