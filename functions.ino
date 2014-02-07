@@ -40,7 +40,7 @@ void Red_LED_Blink(unsigned short blink_count)
   unsigned char i;
 
 #if(RX_BOARD_TYPE == 1)         // с Тини особый случай
-    _spi_write(0x0d, 0x0a);     // gpio2 - управление  лампочкой
+    _spi_write(0x0d, 0x0a);     // gpio2 - управление SAW фильтром/или лампочкой
 #endif
     
   for (i=0; i<blink_count; i++)     {
@@ -126,6 +126,25 @@ void Hopping(void)
 }
 
 byte futabaDirect[14];         // копия прямого кодирования 10-ти 11 битных каналов для передачи в sbus
+
+/**********************************/
+void setFDch(byte n, word pwm) // вставить канал n в буфер futabaDirect
+{
+  byte bn=n*11;              // абсолютный номер первого бита
+  byte m,b=bn>>3;              // номер байта
+  bn-= b<<3;                 // номер бита в байте
+
+  m=(1<<(8-bn))-1;             // маска первого байта
+  futabaDirect[b++] |= ((pwm&m) << bn);
+  pwm >>= 8-bn;
+  futabaDirect[b] |= pwm;      // второй байт
+  if(bn > 5) {
+    futabaDirect[++b] |= pwm>>8; // третий байт, если надо
+  }
+}
+
+/**********************************/
+
 // Преобразование данных входного буфера buf в длительности PWM
 byte Buf_To_Servo(unsigned char buf[])
 {
@@ -134,7 +153,7 @@ byte Buf_To_Servo(unsigned char buf[])
      byte i,m,fsFlag=0;
      int pwm;
 
-     if(Regs4[5] != 2) {                    // Стандартный пакет Экспертовского представления
+     if(Regs4[5] < 2) {                    // Стандартный пакет Экспертовского представления
        byte lowBit=buf[RC_CHANNEL_COUNT+3];
        byte bit11=buf[RC_CHANNEL_COUNT+1];    // 12-й канал, может быть использовани как хранилище 11-го бита
        for(i=0; i<RC_CHANNEL_COUNT; i++) { // Write into the Servo Buffer
@@ -166,9 +185,15 @@ byte Buf_To_Servo(unsigned char buf[])
        byte j,k;
        word wm;
        
-       for(i=0; i<sizeof(futabaDirect); i++) futabaDirect[i]=buf[i+1]; // скопируем непреобразованный пакет, для прямой пересылки в sbus
+       if(receiver_mode == 2) { // когда включен sbus
+         if(Regs4[5] == 3) {             // для прямой пересылки в sbus
+           for(i=0; i<sizeof(futabaDirect); i++) futabaDirect[i]=0; // подготовим буфер обнулением
+         } else {
+           for(i=0; i<sizeof(futabaDirect); i++) futabaDirect[i]=buf[i+1]; // или скопируем непреобразованный пакет, 
+         }
+       }
        k=m=1;                           // счетчик байт в пакете и маска бита
-       for(i=0; i<10; i++) {  
+       for(i=0; i<10; i++) {            // цикл по кналам 
          pwm=0; wm=1;
          for(j=0; j<11; j++) {          // счетчик бит в представлении
            if(buf[k] & m) pwm |= wm;
@@ -176,14 +201,20 @@ byte Buf_To_Servo(unsigned char buf[])
            if(m == 0x80) { m=1; k++; } // обнуляем
            else m = m + m;             // или двигаем маску
          }
-         if(i == ServoStrechNum || i == ServoStrechNum2) {     // реализуем расширение диапазона сервы на 150%
+
+         if(Regs4[5] == 3) {           // в режиме 3 обратный порядок каналов 
+            j=9-i;     
+            if(receiver_mode == 2) setFDch(j,pwm);  // кладем в sbus буфер
+         } else j=i;
+
+         if(j == ServoStrechNum || j == ServoStrechNum2) {     // реализуем расширение диапазона сервы на 150%
            pwm-=1024;
            pwm+=pwm>>1;               // умножаем на 1.5
            if(pwm > 1200) pwm=1200;
            else if(pwm < -1200) pwm=-1200;
            pwm+=1024;
          }
-         Servo_Buffer[i]=((pwm+pwm+pwm+pwm+pwm)>>2) + 1760;   // формируем значение в PPM буфере
+         Servo_Buffer[j]=((pwm+pwm+pwm+pwm+pwm)>>2) + 1760;   // формируем значение в PPM буфере
        }
        fsFlag=buf[k]&0x80;            // признак установки FS в пакете          
      }
@@ -240,6 +271,6 @@ byte CRC8(byte buf[], byte len)
 
 byte calcCRC(byte buf[])
 {
-   if(Regs4[5] == 2) return CRC8(buf+1,RF_PACK_SIZE-1);  // проверяем принятый пакет в режиме Futaba
+   if(Regs4[5] >= 2) return CRC8(buf+1,RF_PACK_SIZE-1);  // проверяем принятый пакет в режиме Futaba
    else return CRC8(buf+2,RF_PACK_SIZE-3);               // проверяем принятый пакет в режиме Эксперта
 }       
