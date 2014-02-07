@@ -51,4 +51,8 @@ Manual in Wiki: https://github.com/baychi/OpenTinyRX/wiki/%D0%A0%D1%83%D0%BA%D0%
 - bugfix in statistics.
 - added relative output in statistic - sr;
 - added ouput level in dB in statistics - sR, sL, sA;
-- 
+
+7 feb 2014
+- bugfix in mode detection function (time to test increase in 100x);
+- added mode 3 = Futaba with reverced channels in packet
+
