@@ -14,7 +14,7 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 11, 1 };
+unsigned char version[] = { 12, 1 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -314,6 +314,83 @@ unsigned long lastSatTime=0;            // время приема послед�
       unsigned char diskrMask[8] = {                                // маски выходов
          _BV(5), _BV(6), _BV(7), _BV(0), _BV(1), _BV(2), _BV(3), _BV(4)
       };
+   
+#endif
+
+#if (RX_BOARD_TYPE==3)     //### PINOUTS OF OpenLRS Rx V2 Board in alternative mode
+      #define SDO_pin A0
+      #define SDI_pin A1        
+      #define SCLK_pin A2 
+      #define IRQ_pin 2
+      #define nSel_pin 4
+      #define IRQ_interrupt 0
+      
+      #define  nIRQ_1 (PIND & 0x04)==0x04 //D2
+      #define  nIRQ_0 (PIND & 0x04)==0x00 //D2
+      
+      #define  nSEL_on PORTD |= 0x10 //D4
+      #define  nSEL_off PORTD &= 0xEF //D4
+      
+      #define  SCK_on PORTC |= 0x04 //C2
+      #define  SCK_off PORTC &= 0xFB //C2
+      
+      #define  SDI_on PORTC |= 0x02 //C1
+      #define  SDI_off PORTC &= 0xFD //C1
+      
+      #define  SDO_1 (PINC & 0x01) == 0x01 //C0
+      #define  SDO_0 (PINC & 0x01) == 0x00 //C0
+      
+// SAW filtre support
+      #define SAW_FILT_ON  _spi_write(0x0e, 0x04);    // GPIO2=1   
+      #define SAW_FILT_OFF  _spi_write(0x0e, 0x00);    // GPIO2=0
+
+      //#### Other interface pinouts ###
+      #define GREEN_LED_pin 13
+      #define RED_LED_pin A3
+    
+      #define Red_LED_ON  PORTC |= _BV(3);
+      #define Red_LED_OFF  PORTC &= ~_BV(3);
+      
+      #define Green_LED_ON  PORTB |= _BV(5);
+      #define Green_LED_OFF  PORTB &= ~_BV(5);
+      
+      #define Servo1_OUT 5 //Servo1
+      #define Servo2_OUT 6 //Servo2
+      #define Servo3_OUT 7 //Servo3
+      #define Servo4_OUT 8 //Servo4
+      #define Servo5_OUT 9 //Servo5
+      #define Servo6_OUT 10 //Servo6
+      #define Servo7_OUT 11 //Servo7
+      #define Servo8_OUT 12 //Servo8
+      #define Servo9_OUT A4 //Servo9
+      #define Servo10_OUT A5 //Servo10
+      
+      #define RSSI_MODE 0 // 0=disable  1=enable 
+      #define RSSI_OUT 3  // PORTD.3      
+      
+      #define Serial_PPM_OUT_HIGH PORTD |= _BV(5) //Serial PPM out on Servo 3
+      #define Serial_PPM_OUT_LOW PORTD &= ~_BV(5) //Serial PPM out on Servo 3
+
+      #define SBUS_OUT_HIGH PORTD &= ~_BV(7) // SBUS out
+      #define SBUS_OUT_LOW PORTD  |= _BV(7)  // SBUS out
+
+      #define SBUS_OUT_BIT _BV(7)            // SBUS out bit
+      #define SBUS_OUT_PORT 2                // SBUS out port
+
+      unsigned char offOutsMask[3] = { 0xE0, 0xCF, 0x1F };       // маски портов, при сбросе всех импульсов в 0
+
+      volatile unsigned char *portAddr[PWM_OUT_NUM] = {                // адреса портов, поканально  
+        &PORTD, &PORTD, &PORTD, &PORTB, &PORTB, &PORTB, &PORTB, &PORTB, &PORTC, &PORTC 
+      };
+      
+      unsigned char portMask[PWM_OUT_NUM] = {                      // маски портов поканально
+         _BV(5), _BV(6), _BV(7), _BV(0), _BV(1), _BV(2), _BV(3), _BV(4), _BV(4), _BV(5)
+      };
+      unsigned char diskrMask[8] = {                                // маски выходов
+         _BV(5), _BV(6), _BV(7), _BV(0), _BV(1), _BV(2), _BV(3), _BV(4)
+      };
+#define PPM_MODE_JUMPER  6        // проверка на режим PPM
+#define SBUS_MODE_JUMPER 0        // режим SBUS  
    
 #endif
 
