@@ -540,7 +540,9 @@ repTimes:
   if(Regs4[4] > 1) Regs4[4]=0;                 
   
   delete buf;
-  write_eeprom();             // записываем новую привязку в EEPROM 
+  write_eeprom();              // записываем новую привязку в EEPROM 
+  Red_LED_ON;
+
 #if(RX_BOARD_TYPE == 1)       // с Тини особый случай
   _spi_write(0x0d, 0x0a);     // gpio2 - управление  лампочкой
   _spi_write(0x0e, 0x04);     // зажигаем индикатор
@@ -548,7 +550,6 @@ repTimes:
   Red_LED_ON;
 #endif
 }
-
 #else
 void makeBind(void)                         // собственно поиск передатчика
 {
