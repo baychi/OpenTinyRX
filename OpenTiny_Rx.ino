@@ -17,6 +17,7 @@
 
 #include "config.h"
 #include <EEPROM.h>
+#include <avr\boot.h>
 
 //---------------------------------------------------------------------------
 //
@@ -263,6 +264,11 @@ void loop()
     Serial.print("S/N=");  Serial.println(Regs4[0]);
     showRegs();            // отобразим регистры (в режиме саттелита не перегружаем буффер)
   
+    Serial.print("Fuses: ");
+    Serial.print(boot_lock_fuse_bits_get(GET_LOW_FUSE_BITS),HEX); Serial.write(' ');
+    Serial.print(boot_lock_fuse_bits_get(GET_HIGH_FUSE_BITS),HEX); Serial.write(' ');
+    Serial.println(boot_lock_fuse_bits_get(GET_EXTENDED_FUSE_BITS),HEX);
+   
     Serial.print("IRQ="); 
     Serial.println(_spi_read(0x04)&1); 
 
