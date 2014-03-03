@@ -130,7 +130,6 @@ byte read_eeprom(void)
    RSSIreg[2] = read_eeprom_uchar(42);  
 
    if(RSSIreg[2] < 1 || RSSIreg[2] > RC_CHANNEL_COUNT) RSSIreg[2]=0;             // 1 - RC_CHANNEL_COUNT, другое - не использовать
-   ks+=RSSIreg[2];
 
    if(read_eeprom_uint(EEPROM_KS_ADR) != ks) return 0;            // Checksum error
 
