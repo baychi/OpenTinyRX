@@ -60,6 +60,7 @@ void Red_LED_Blink(unsigned short blink_count)
 
 #if(RX_BOARD_TYPE == 1)       // с Тини особый случай
   _spi_write(0x0e, 0x00);     // гасим индикатор
+#else
    Red_LED_OFF;
 #endif
   }
