@@ -27,7 +27,7 @@ Manual in Wiki: https://github.com/baychi/OpenTinyRX/wiki/%D0%A0%D1%83%D0%BA%D0%
 - added noise level output without recieving
 - minor constant corrections
 
-6 nov 2013 (version F8)
+6 nov 2013 (version F7)
 - Added SBUS out mode
 - Added autobinding to transmitter
 - Added discrete outs
