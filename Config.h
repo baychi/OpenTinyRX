@@ -14,7 +14,7 @@
 
 // Версия и номер компиляции. Используется для проверки целостности программы
 // При модификации программы необходимо изменить одно из этих чисел 
-unsigned char version[] = { 12, 2 };
+unsigned char version[] = { 13, 1 };
 
 //####### RX BOARD TYPE #######
 // 1 = Rx 2G/Tiny original Board
@@ -46,20 +46,20 @@ unsigned char version[] = { 12, 2 };
 #define HOPE_NUM          8 /* number of hope frequensies */ 
 #define AFC_POROG        4  /* предельное отклонение частоты, требующее коррекции */
 
-//###### HOPPING CHANNELS #######
-//Каналы прыжков (регистры 11-18) Select the hopping channels between 0-255
-//Frequency = CARRIER_FREQUENCY + (StepSize(60khz)* Channel_Number) 
-static unsigned char hop_list[HOPE_NUM] = {77,147,89,167,109,189,127,209};   // по умолчанию - мои частоты
-
 // Четыре первых регистра настроек (S/N, номер Bind, поправка частоты, номер сервы расширения, разрешение статистики 
 static unsigned char Regs4[7] = {99 ,72, 204, 0, 1, 0, 0 };  
+static unsigned char confReg[4] = { 0, 0, 0, 0 } ;           // конфтгурационные регистры 7-10
+
+//###### HOPPING CHANNELS #######
+//Каналы прыжков (регистры 11-18) Select the hopping channels between 0-255
+static unsigned char hop_list[HOPE_NUM] = {77,147,89,167,109,189,127,209};   // по умолчанию - мои частоты
 
 // Регистры поддержки SAW фильтра (25,26) задают границы частот, внутри которых фильтр включен (GPIO2=1)
 static unsigned char  SAWreg[2] =   {75, 210 };  
 // Регистры маяка (19-24): частота, мошность1 - мощность 4, пауза перед первым писком (сек)
 // При неотключаемом SAW, неообходимо ограничить мощность 10 мВт и внести частоту маяка в полосу фильтра
 static unsigned char  BeaconReg[6] =   { 101, 4, 2, 1, 0, 30 };  
-static unsigned char pwm1chnl = 4;     // номер первого PWM канала в комбинированном режимме.
+static unsigned char pwm1chnl = 2;     // номер первого PWM канала в комбинированном режимме.
 
 // Регистры RSSI (40-42). Задают тип (биби/Вольты) и режим (уровень сигнала или отношение сигнал/шум).
 // RSSIreg[2] - вывод RSSI через PWM выход (1-8)
@@ -94,12 +94,12 @@ unsigned int rl_counter=0;             // счетчик непринятых п
 unsigned short Rx_RSSI, N_RSSI, Pause_RSSI, N_pause;       // переменные для вычисления RSSI
 unsigned int lastRSSI=0;                                 
 
-#define PPM_MODE_JUMPER  0        // проверка на режим PPM
+#define PPM_MODE_JUMPER  6        // проверка на режим PPM
 #define SA_MODE_JUMPER   1        // проверка на режим анализатора (не реализванно)
 #define RESET_JUMPER     2        // проверка на сброс настроек 
 #define SAT_MODE_JUMPER  4        // режим сателлита
 #define REBIND_JUMPER    5        // режим автопривязки к передатчику
-#define SBUS_MODE_JUMPER 6        // режим SBUS  
+// #define SBUS_MODE_JUMPER 0        // режим SBUS  
 
 unsigned char receiver_mode = 0, reciever_outs=PWM_OUT_NUM;  // режим работы (PWM/PPM) и количкство вых каналов 10/12
 unsigned char hopping_channel = 0;
@@ -218,8 +218,8 @@ unsigned long lastSatTime=0;            // время приема послед�
     #define Servo11_OUT A2 //Servo11 // 2G only  
     #define Servo12_OUT A1 //Servo12 // 2G only
 
-    #define Serial_PPM_OUT_HIGH PORTB |= _BV(0) //Serial PPM out on Servo 3
-    #define Serial_PPM_OUT_LOW PORTB &= ~_BV(0) //Serial PPM out on Servo 3
+    #define Serial_PPM_OUT_HIGH PORTB |= _BV(2) //Serial PPM out on Servo 1
+    #define Serial_PPM_OUT_LOW PORTB &= ~_BV(2) //Serial PPM out on Servo 1
 
     #define SBUS_OUT_HIGH PORTB &= ~_BV(2) // SBUS out
     #define SBUS_OUT_LOW PORTB  |= _BV(2)  // SBUS out
@@ -238,6 +238,7 @@ unsigned long lastSatTime=0;            // время приема послед�
     unsigned char diskrMask[8] = {                                     // маски  дискр. выходов
        _BV(2), _BV(1), _BV(0), _BV(7), _BV(6), _BV(5), _BV(4), _BV(5)
     };
+    unsigned char soundOut[] = { 6 , 5 };                    // номера каналов, куда выводится звук для D5, D6, D11
 #endif
 
 
@@ -293,8 +294,8 @@ unsigned long lastSatTime=0;            // время приема послед�
       #define RSSI_MODE 0 // 0=disable  1=enable 
       #define RSSI_OUT 3  // PORTD.3      
       
-      #define Serial_PPM_OUT_HIGH PORTD |= _BV(7) //Serial PPM out on Servo 3
-      #define Serial_PPM_OUT_LOW PORTD &= ~_BV(7) //Serial PPM out on Servo 3
+      #define Serial_PPM_OUT_HIGH PORTD |= _BV(5) //Serial PPM out on Servo 1
+      #define Serial_PPM_OUT_LOW PORTD &= ~_BV(5) //Serial PPM out on Servo 1
 
       #define SBUS_OUT_HIGH PORTD &= ~_BV(5) // SBUS out
       #define SBUS_OUT_LOW PORTD  |= _BV(5)  // SBUS out
@@ -311,9 +312,11 @@ unsigned long lastSatTime=0;            // время приема послед�
       unsigned char portMask[PWM_OUT_NUM] = {                      // маски портов поканально
          _BV(5), _BV(6), _BV(7), _BV(0), _BV(1), _BV(2), _BV(3), _BV(4), _BV(4), _BV(5)
       };
-      unsigned char diskrMask[8] = {                                // маски выходов
+      unsigned char diskrMask[8] = {                               // маски выходов
          _BV(5), _BV(6), _BV(7), _BV(0), _BV(1), _BV(2), _BV(3), _BV(4)
       };
+
+      unsigned char soundOut[] = { 1, 2, 7 };                     // номера каналов, куда выводится звук через D5, D6, D11
    
 #endif
 
@@ -368,8 +371,8 @@ unsigned long lastSatTime=0;            // время приема послед�
       #define RSSI_MODE 0 // 0=disable  1=enable 
       #define RSSI_OUT 3  // PORTD.3      
       
-      #define Serial_PPM_OUT_HIGH PORTD |= _BV(5) //Serial PPM out on Servo 3
-      #define Serial_PPM_OUT_LOW PORTD &= ~_BV(5) //Serial PPM out on Servo 3
+      #define Serial_PPM_OUT_HIGH PORTD |= _BV(7) //Serial PPM out on Servo 3
+      #define Serial_PPM_OUT_LOW PORTD &= ~_BV(7) //Serial PPM out on Servo 3
 
       #define SBUS_OUT_HIGH PORTD &= ~_BV(7) // SBUS out
       #define SBUS_OUT_LOW PORTD  |= _BV(7)  // SBUS out
@@ -389,6 +392,8 @@ unsigned long lastSatTime=0;            // время приема послед�
       unsigned char diskrMask[8] = {                                // маски выходов
          _BV(5), _BV(6), _BV(7), _BV(0), _BV(1), _BV(2), _BV(3), _BV(4)
       };
+      unsigned char soundOut[] = { 1, 2, 7 };                     // номера каналов, куда выводится звук через D5, D6, D11
+
 #define PPM_MODE_JUMPER  6        // проверка на режим PPM
 #define SBUS_MODE_JUMPER 0        // режим SBUS  
    
