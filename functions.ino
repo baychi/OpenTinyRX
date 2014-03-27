@@ -233,7 +233,7 @@ byte Buf_To_Servo(unsigned char buf[])
            m += m;
         }
       }
-      
+    
       return fsFlag;
 }  
 
