@@ -56,3 +56,9 @@ Manual in Wiki: https://github.com/baychi/OpenTinyRX/wiki/%D0%A0%D1%83%D0%BA%D0%
 - bugfix in mode detection function (time to test increase in 100x);
 - added mode 3 = Futaba with reverced channels in packet
 
+27 mar 2013 (version 13)
+- additional channel for sound at packet lost (R8). 
+- switch mode (PWM/PPM/SBUS) now from menu only (R7).
+- added fuses value output at start.
+- settings not comtable with older versions. Change any register before use.
+- 
