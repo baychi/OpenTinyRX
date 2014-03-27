@@ -415,7 +415,7 @@ void makeBind(void)                         // собственно поиск �
   byte i,j,k,l,n,hCnt;
   byte bind;
   unsigned long t,maxT;
-  byte ue=check_modes(5)==0;    // флаг, разрешающий UART
+  byte ue=check_modes(REBIND_JUMPER)==0;    // флаг, разрешающий UART
   
   sei();
 
