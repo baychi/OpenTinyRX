@@ -102,6 +102,9 @@ byte read_eeprom(void)
 
    for(i=0; i<sizeof(Regs4); i++)      // S/N, номер линка, поправка частоты, разрешение статистики, servostrech
      ks+= Regs4[i] = read_eeprom_uchar(i); 
+
+   for(i=0; i<sizeof(confReg); i++)    // регистры конфигурацииb 7-10
+     ks+= confReg[i] = read_eeprom_uchar(i+7); 
      
    // hopping channels
    for(i=0; i<HOPE_NUM; i++)  ks+=hop_list[i] = read_eeprom_uchar(i+11);
@@ -127,8 +130,6 @@ byte read_eeprom(void)
    for(i=0; i<sizeof(RSSIreg); i++) {
      ks+= RSSIreg[i] = read_eeprom_uchar(40+i);  
    }
-   RSSIreg[2] = read_eeprom_uchar(42);  
-
    if(RSSIreg[2] < 1 || RSSIreg[2] > RC_CHANNEL_COUNT) RSSIreg[2]=0;             // 1 - RC_CHANNEL_COUNT, другое - не использовать
 
    if(read_eeprom_uint(EEPROM_KS_ADR) != ks) return 0;            // Checksum error
@@ -147,6 +148,11 @@ void write_eeprom(void)
      ks+=Regs4[i];      
    }     
 
+   for(i=0; i<sizeof(confReg); i++) {    // регистры конфигурацииb 7-10
+     write_eeprom_uchar(i+7,confReg[i]);
+     ks+=confReg[i];
+   }
+   
    // hopping channels
    for(i=0; i<HOPE_NUM; i++) {
      write_eeprom_uchar(i+11,hop_list[i]);   
