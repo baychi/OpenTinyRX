@@ -23,7 +23,7 @@ void printlnPGM(char *adr, char ln)   // печать строки из памя
   if(ln) Serial.println();  
 }
 
-static unsigned char regs[] = {1, 2, 3, 4, 5, 6, 11,12,13,14,15,16,17,18,19,20,24,25,26,28,40,41,42 } ;
+static unsigned char regs[] = {1, 2, 3, 4, 5, 6, 7, 8, 11,12,13,14,15,16,17,18,19,20,24,25,26,28,40,41,42 } ;
 
 // Держим текст в программной памяти
 //
@@ -33,27 +33,33 @@ static char help3[] PROGMEM =  "Servo 150% strech num (1-12)";
 static char help4[] PROGMEM =  "Statistics enable";
 static char help22[] PROGMEM = "11bit/10ch (1=yes, 2/3=Futaba)";
 static char help23[] PROGMEM = "Discrete outputs mask";
+static char help24[] PROGMEM = "1 output mode: PWM/PPM/SBUS = 0/1/2";
+#if (RX_BOARD_TYPE==1)
+static char help25[] PROGMEM = "Packet lost sound output (0=off, 5,6)";  // номера выходов, куда можно вывести звук потерь пакетов
+#else
+static char help25[] PROGMEM = "Packet lost sound output (0=off, 1,2,7)";
+#endif
 static char help5[] PROGMEM =  "Hop F1";
 static char help6[] PROGMEM =  "Hop F2";
 static char help7[] PROGMEM =  "Hop F3";
 static char help8[] PROGMEM =  "Hop F4";
 static char help9[] PROGMEM =  "Hop F5";
-static char help10[] PROGMEM =  "Hop F6";
-static char help11[] PROGMEM =  "Hop F7";
-static char help12[] PROGMEM =  "Hop F8";
-static char help13[] PROGMEM =  "Beacon F (255=disable)";
-static char help14[] PROGMEM =  "Beacon Pmax (mWt): 0-1.2; 1-2; 2-3; 3-6; 4-12; 5-25; 6-50; 7-100";  
-static char help15[] PROGMEM =  "Beacon start time (sec)";
-static char help16[] PROGMEM =  "SAW Fmin";
-static char help17[] PROGMEM =  "SAW Fmax";
-static char help18[] PROGMEM =  "PPM/SBUS mode 1st PWM chnl (1-8) [4]"; 
-static char help19[] PROGMEM =  "RSSI type: sound(0)/level(1-99=average)";
-static char help20[] PROGMEM =  "RSSI mode: level(0)/SN ratio(1)";
-static char help21[] PROGMEM =  "RSSI over PWM(chan:1-12) 0-not use";
+static char help10[] PROGMEM = "Hop F6";
+static char help11[] PROGMEM = "Hop F7";
+static char help12[] PROGMEM = "Hop F8";
+static char help13[] PROGMEM = "Beacon F (255=disable)";
+static char help14[] PROGMEM = "Beacon Pmax (mWt): 0-1.2; 1-2; 2-3; 3-6; 4-12; 5-25; 6-50; 7-100";  
+static char help15[] PROGMEM = "Beacon start time (sec)";
+static char help16[] PROGMEM = "SAW Fmin";
+static char help17[] PROGMEM = "SAW Fmax";
+static char help18[] PROGMEM = "PPM/SBUS mode 1st PWM chnl (1-8) [2]"; 
+static char help19[] PROGMEM = "RSSI type: sound(0)/level(1-99=average)";
+static char help20[] PROGMEM = "RSSI mode: level(0)/SN ratio(1)";
+static char help21[] PROGMEM = "RSSI over PWM(chan:1-12) 0-not use";
 static char *menuAdr[] = {      // массив адресов строк 
-   help1, help2, help3, help4, help22, help23, help5, help6, help7, help8, help9, help10, 
-   help11, help12, help13, help14, help15, help16, help17, help18, help19, help20, 
-   help21
+   help1, help2, help3, help4, help22, help23, help24, help25, help5, help6, help7,
+   help8, help9, help10, help11, help12, help13, help14, help15, help16, help17,
+   help18, help19, help20, help21
 };  
 
 
@@ -181,7 +187,7 @@ void showNoise(char str[])             // отображаем уровень ш
   }
 }
 
-char htxt1[] PROGMEM = "\n\rBaychi soft 2013";
+char htxt1[] PROGMEM = "\n\rBaychi soft 2014";
 char htxt3[] PROGMEM = "RX Open Expert V2 F";
 void printHeader(void)
 {
