@@ -69,7 +69,6 @@ void setup()
 	pinMode(SCLK_pin, OUTPUT); //SCLK
         pinMode(IRQ_pin, INPUT); //IRQ
         pinMode(nSel_pin, OUTPUT); //nSEL
-     
         
         pinMode(0, INPUT); // Serial Rx
         pinMode(1, OUTPUT);// Serial Tx
@@ -87,7 +86,16 @@ void setup()
         pinMode(Servo8_OUT, OUTPUT); //Servo8
         pinMode(Servo9_OUT, OUTPUT); //Servo9
         pinMode(Servo10_OUT, OUTPUT); //Servo10
-        
+
+/****************************************
+#if(Servo11_OUT > 0)   
+        pinMode(Servo11_OUT, OUTPUT); //Servo11 // 2G only  
+#endif
+#if(Servo12_OUT > 0)   
+        pinMode(Servo12_OUT, OUTPUT); //Servo12 // 2G only
+#endif        
+*****************************************/
+
        INIT_SERVO_DRIVER();
        
        attachInterrupt(IRQ_interrupt,RFM22B_Int,FALLING);
@@ -103,37 +111,36 @@ ISR(TIMER1_OVF_vect)
 {
   unsigned int us; // this value is not real microseconds, we are using 0.5us resolution (2048 step), this is why the all values 2 times more than real microseconds.
   
-   while (TCNT1<32);  // Убираем неопределенность входа в прерывание (лишний джиттер)
+   while (TCNT1<32);             // Убираем неопределенность входа в прерывание (лишний джиттер)
 
-   PORTB &= offOutsMask[0];      // стави все выходы PPM/PWM в 0
+   PORTB &= offOutsMask[0];      // ставим все выходы PPM/PWM в 0
    PORTC &= offOutsMask[1];
    PORTD &= offOutsMask[2];
 
-   if(PWM_enable) {  // генерим любые импульсы только после разрешения
-     Servo_Number++;  // jump to next servo
+   if(PWM_enable) {              // генерим любые импульсы только после разрешения
+     Servo_Number++;             // jump to next servo
      if(Servo_Number > reciever_outs) { // back to the first servo 
-       total_ppm_time = 0; // clear the total servo ppm time
+       total_ppm_time = 0;       // clear the total servo ppm time
        Servo_Number=0;
      }
  
      if(Servo_Number == reciever_outs) {    // После последнего, выводим только межканальную паузу
-        //Servos accepting 50hz ppm signal, this is why we are waiting for 20ms before second signal brust. 
-        if(total_ppm_time < ppmPwmCycleTime-6000) us = ppmPwmCycleTime - total_ppm_time; //wait for total 20ms loop.  waiting time = 20.000us - total servo times
+        if(total_ppm_time < ppmPwmCycleTime-6000) us = ppmPwmCycleTime - total_ppm_time; 
         else us=6000;                      // если сумма импульсов болше 20 мс, обеспечиваем 3 мс паузу, растягивя цикл                                
      } else {
        char i=Servo_Number;                // i  - номер воспроизводимого канала, он не всегда равен порядковому номеру импульса
-       if(receiver_mode == 2) i += pwm1chnl-1;   // это номер воспроизводимого канала в режиме SBUS
-       us = Servo_Position[i]-36;         // берем ширину импульса из нужного канала (36 - поправка: 16 мкс уборку джиттера и еще 2 мкс на сам драйвер)
-       total_ppm_time += us;              // добавляем ее к общей сумма
+       if(receiver_mode == 2) i += pwm1chnl-1;  // это номер воспроизводимого канала в режиме SBUS
+       us = Servo_Position[i]-36;          // берем ширину импульса из нужного канала (36 - поправка: 16 мкс уборку джиттера и еще 2 мкс на сам драйвер)
+       total_ppm_time += us;               // добавляем ее к общей сумма
  
-       // а теперб вычислим куда его выводить
-       if (receiver_mode==0) {             // Parallel PWM, индекс выхода совпадает с номером импульса
-         i=Servo_Number; 
-       } else if(receiver_mode == 1) {     // Serial PPM, до 10 импульсов
-          i=Servo_Number+4-pwm1chnl;       // остальные PWM каналы, определяются смещением
-          if(i<3) i=16;                    // пока не дошли, до 4-го канала ставим невоспроизводимый индекс 
+       // а теперь вычислим куда его выводить
+       if(receiver_mode==0) {              // Parallel PWM, индекс выхода совпадает с номером импульса
+          i=Servo_Number; 
+       } else if(receiver_mode == 1) {     // Serial PPM, до 10 импульсов плюс до 10 PWM с заданным смещением
+          i=Servo_Number+2-pwm1chnl;       // остальные PWM каналы, определяются смещением
+          if(i<1) i=16;                    // пока не дошли, до 2-го канала ставим невоспроизводимый индекс 
        } else {                            // режим SBUS, 
-          i=Servo_Number+3;                // PWM каналы выводятся на 4,5,6,7 выходы, определяются смещением
+          i=Servo_Number+1;                // PWM каналы выводятся на 2,3,4,5 выходы, определяются смещением
        }
        if(i < sizeof(portMask)) {          // выводим текущий канал на заданный смещением вывод
          *portAddr[i] |= portMask[i];     
@@ -145,9 +152,9 @@ ISR(TIMER1_OVF_vect)
        us-=500;                       // вычитаемм сделанную паузу, с небольшим запасом
        Serial_PPM_OUT_LOW;            // ставим 1-ку на PPM выходе
      }
-  } else us=ppmPwmCycleTime;    // обеспечиваем холостой цикл
+  } else us=ppmPwmCycleTime;         // обеспечиваем холостой цикл
   
-  TCNT1 = ppmPwmCycleTime - us; // configure the timer interrupt for X micro seconds     
+  TCNT1 = ppmPwmCycleTime - us;      // следующее прерываение через us мкс     
 }
 
 // Вывод RSSI с усреденнием
@@ -172,6 +179,21 @@ void OutRSSI(byte val, byte weight)
   }
    analogWrite(RSSI_OUT,avr);
    lastRSSI=avr;
+   if(confReg[1] > 0) {         // если запрошен звук через другие каналы
+      if(val == 0) avr=127;     // пищим, когда пакет потерян
+      else avr=0; 
+      for(navr=0; navr<sizeof(soundOut); navr++) {  // проверяем, куда попадает запрошенный канал
+        if(soundOut[navr] == confReg[1]) {
+          if(navr < 2) analogWrite(5+navr,avr);     // выводим реальный звук через D5, D6
+          else analogWrite(11,avr);                 // или D11
+          break;
+        }
+      }
+      if(navr>=sizeof(soundOut)) {                  // если не можем выдать звук, работаем как дискретный выход
+         if(avr) *portAddr[confReg[1]] |= diskrMask[confReg[1]];    // включаем
+         else *portAddr[confReg[1]] &= ~diskrMask[confReg[1]];      // или отключаем
+      }       
+   }
 }
 #endif
 
@@ -179,15 +201,20 @@ void dOutsInit()               // инициализация дискретны�
 {
   byte pi;
   
-  if(Regs4[6]) {
+  if(receiver_mode) {
+     Regs4[6]&=0xfe;   // в ppm/sbus режиме первый выход не может быть дискретным 
+     if(confReg[1] == 1) confReg[1]=0; // и не может быть перекрыт звуком
+  }
+  
+  if(Regs4[6] || confReg[1]) {
      for(byte i=0; i<8; i++) {   // до 8-им дискретных выходов
-       if(Regs4[6] & (1<<i)) {   // если они есть...
+       if((Regs4[6] & (1<<i)) || (i+1 == confReg[1])) {   // если они есть...
          pi=0;
          if(portAddr[i] == &PORTC) pi=1;        // вычислим индекс порта (как оказалос они не попорядку)
          if(portAddr[i] == &PORTD) pi=2;
          
-         offOutsMask[pi] |= diskrMask[i]; // запрещаем данную ногу уходить в 0
-         portMask[i] = 0;                                // запрещаем данную ногу, как выход PWM
+         offOutsMask[pi] |= diskrMask[i];       // запрещаем данную ногу уходить в 0
+         portMask[i] = 0;                       // запрещаем данную ногу, как выход PWM
        } 
      } 
    }
@@ -223,23 +250,11 @@ void loop()
   long tdif, btime;
   int next_time;               // время ожидания следующего пакета
   
-  receiver_mode = check_modes(PPM_MODE_JUMPER); // режим PPM
-  if(receiver_mode) {
-     reciever_outs=PWM_OUT_NUM;                 // максимум PWM каналов в режиме PPM 
-  } else if(check_modes(SBUS_MODE_JUMPER)) {    // проверяем на SBUS
-     receiver_mode=2;
-     reciever_outs=MAX_SBUS_OUT;
-     ppmPwmCycleTime=28000;
-     ICR1 = ppmPwmCycleTime;                    // used for TOP, makes for 50 hz
-
-     portMask[0] = 0;                           // закроем pin1 для SBUS оут
-     offOutsMask[SBUS_OUT_PORT]  |= SBUS_OUT_BIT;   
-     SBUS_OUT_HIGH;
-  }
-  
   satFlag=check_modes(SAT_MODE_JUMPER);       // проверим на режим саттелита
   
-  Red_LED_Blink(1); // Red LED blink
+  Red_LED_Blink(1);          // Red LED blink
+
+  wdt_enable(WDTO_1S);       // запускаем сторожевой таймер 
 
   if(check_modes(REBIND_JUMPER)) makeBind();    // данный джампер, означает режим поиска и привязки к передатчику
   Serial.begin(SERIAL_BAUD_RATE); //Serial Transmission 
@@ -248,19 +263,32 @@ void loop()
     Red_LED_Blink(1); // Red LED blink
   }
         
-  eeprom_check(); 
-  beaconFcorr=Regs4[2];
-  statInit();                // инициализируем статистику
-  dOutsInit();               // инициализируем дискреные выходы
+  eeprom_check();               // считывание и проверка настроек
+  beaconFcorr=Regs4[2];         // поправка частоты для маяка
+  receiver_mode=confReg[0];     // режим теперь полностью определяется регистром 
+  if(receiver_mode > 2) receiver_mode=0;
+  if(receiver_mode == 0) receiver_mode=check_modes(PPM_MODE_JUMPER); // единственный аппаратный вариант включения режима PPM - 
+                                                                     // это перемычка 2-3.  
+  if(receiver_mode == 2) {     // в режиме s.bus
+     reciever_outs=MAX_SBUS_OUT;
+     ppmPwmCycleTime=28000;
+     ICR1 = ppmPwmCycleTime;                    // used for TOP, makes for 50 hz
+  }
+  if(receiver_mode > 0) {
+     portMask[0] = 0;                           // закроем out 1 для PPM/sbus
+     offOutsMask[SBUS_OUT_PORT]  |= SBUS_OUT_BIT;   
+     SBUS_OUT_HIGH;
+  }
+
+  statInit();               // инициализируем статистику
+  dOutsInit();              // инициализируем дискретные выходы
   
-  load_failsafe_values();   // загрузим дефолты каналов
+  load_failsafe_values();   // загрузим FS каналов
   RF22B_init_parameter();   // инициализируем RFMку
 
-  PWM_enable=0;
-  wdt_enable(WDTO_1S);     // запускаем сторожевой таймер 
+  PWM_enable=0;              
 
   if(!satFlag) {           // 
-
     Serial.print("S/N=");  Serial.println(Regs4[0]);
     showRegs();            // отобразим регистры (в режиме саттелита не перегружаем буффер)
   
