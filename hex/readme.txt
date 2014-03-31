@@ -1,3 +1,4 @@
+For Arduino bootloader and Atmega328 use fuses: Low=DE, High=DA, Extended=FD.
 Megaloader168.hex - compact bootloader for atmega168. Use fuses: Low=DE, High=DD, Extended=FA.
 Megaloader328.hex - compact bootloader for atmega368. Use fuses: Low=DE, High=DC, Extended=FD.
 Megaloader site - http://www.microsyl.com/index.php/2010/03/30/megaload/
