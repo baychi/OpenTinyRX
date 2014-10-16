@@ -90,7 +90,7 @@ void load_failsafe_values()
 {
    for(byte i=0; i<RC_CHANNEL_COUNT; i++)   {
      Servo_Buffer[i] = (EEPROM.read(FS_EEPROM_ADR+(2*i)) * 256) + EEPROM.read(FS_EEPROM_ADR+(2*i)+1);
-     if(Servo_Buffer[i] < 1900 || Servo_Buffer[i] > 4100) Servo_Buffer[i]=3000;             // защита от некорретных данных
+     if(Servo_Buffer[i] < 1760 || Servo_Buffer[i] > 4240) Servo_Buffer[i]=3000;             // защита от некорретных данных
   }  
 }
 
